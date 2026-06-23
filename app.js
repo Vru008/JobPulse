@@ -1,3 +1,8 @@
+const authConfig = {
+  username: "admin",
+  passcodeHash: "9b30ac880d9dd2684f77afd4efed920c243ef214c4e0e23d7ce41a8d666561b6",
+};
+
 const sources = [
   {
     id: "linkedin",
@@ -224,10 +229,41 @@ const elements = {
   bestMatch: document.querySelector("#bestMatch"),
   sourceCount: document.querySelector("#sourceCount"),
   readyCount: document.querySelector("#readyCount"),
+  loginForm: document.querySelector("#loginForm"),
+  loginUser: document.querySelector("#loginUser"),
+  loginPasscode: document.querySelector("#loginPasscode"),
+  loginError: document.querySelector("#loginError"),
+  logoutBtn: document.querySelector("#logoutBtn"),
 };
 
 function save(key, value) {
   localStorage.setItem(`jobpulse-${key}`, JSON.stringify(value));
+}
+
+function isAuthenticated() {
+  return sessionStorage.getItem("jobpulse-authenticated") === "true";
+}
+
+async function sha256(value) {
+  const encoded = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", encoded);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function unlockApp() {
+  sessionStorage.setItem("jobpulse-authenticated", "true");
+  document.body.classList.add("authenticated");
+  renderRoles();
+  renderProfile();
+  renderAll();
+}
+
+function lockApp() {
+  sessionStorage.removeItem("jobpulse-authenticated");
+  document.body.classList.remove("authenticated");
+  elements.loginError.textContent = "";
+  elements.loginPasscode.value = "";
+  elements.loginUser.focus();
 }
 
 function sourceById(sourceId) {
@@ -436,6 +472,28 @@ document.querySelector("#refreshBtn").addEventListener("click", () => {
   renderAll();
 });
 
-renderRoles();
-renderProfile();
-renderAll();
+elements.loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  elements.loginError.textContent = "";
+
+  const username = elements.loginUser.value.trim();
+  const passcode = elements.loginPasscode.value;
+  const passcodeHash = await sha256(passcode);
+
+  if (username === authConfig.username && passcodeHash === authConfig.passcodeHash) {
+    unlockApp();
+    return;
+  }
+
+  elements.loginError.textContent = "That username or passcode is not correct.";
+  elements.loginPasscode.value = "";
+  elements.loginPasscode.focus();
+});
+
+elements.logoutBtn.addEventListener("click", lockApp);
+
+if (isAuthenticated()) {
+  unlockApp();
+} else {
+  lockApp();
+}

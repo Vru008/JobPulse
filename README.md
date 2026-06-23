@@ -8,6 +8,17 @@ py -m http.server 5173
 
 Then visit `http://localhost:5173`.
 
+## Private login
+
+The app now shows a login screen before the dashboard.
+
+- Username: `admin`
+- Passcode: `JobPulse2026!`
+
+To change the login, edit `authConfig` at the top of `app.js`. The passcode is stored as a SHA-256 hash, so generate a new hash before publishing.
+
+Important: this is client-side privacy for a static MVP. It hides the app from casual visitors, but it is not strong security because static site files can be inspected in the browser. For true "only me" access after deployment, use hosting-level protection such as Netlify password protection, Cloudflare Access, Vercel/Supabase auth, or convert the app to a backend-backed product.
+
 ## Deploy
 
 This version is a static MVP, so it can be deployed directly from GitHub.
