@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JobPulse</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">JP</span>
+          <div>
+            <strong>JobPulse</strong>
+            <span>Daily role cockpit</span>
+          </div>
+        </div>
+
+        <nav aria-label="Primary navigation">
+          <button class="nav-item active" data-view="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="profile">Profile</button>
+          <button class="nav-item" data-view="sources">Sources</button>
+          <button class="nav-item" data-view="tracker">Tracker</button>
+        </nav>
+
+        <section class="sync-panel">
+          <span>Next refresh</span>
+          <strong>Tomorrow, 8:00 AM</strong>
+          <button id="refreshBtn" class="ghost-btn">Refresh now</button>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Fresh matches</p>
+            <h1>Jobs aligned with your profile</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="search-box">
+              <span>Search</span>
+              <input id="searchInput" type="search" placeholder="role, company, skill" />
+            </label>
+            <a id="multiSearchLink" class="primary-btn" href="#" target="_blank" rel="noreferrer">Search web</a>
+          </div>
+        </header>
+
+        <section id="dashboard" class="view active">
+          <div class="metrics">
+            <article>
+              <span>New today</span>
+              <strong id="newToday">0</strong>
+            </article>
+            <article>
+              <span>Best match</span>
+              <strong id="bestMatch">0%</strong>
+            </article>
+            <article>
+              <span>Trusted sources</span>
+              <strong id="sourceCount">0</strong>
+            </article>
+            <article>
+              <span>Ready to apply</span>
+              <strong id="readyCount">0</strong>
+            </article>
+          </div>
+
+          <div class="controls">
+            <label>
+              Role
+              <select id="roleFilter">
+                <option value="all">All roles</option>
+              </select>
+            </label>
+            <label>
+              Work mode
+              <select id="modeFilter">
+                <option value="all">Any</option>
+                <option value="Remote">Remote</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="Onsite">Onsite</option>
+              </select>
+            </label>
+            <label>
+              Minimum match
+              <input id="matchFilter" type="range" min="50" max="95" value="70" />
+              <span id="matchLabel">70%</span>
+            </label>
+          </div>
+
+          <div id="jobList" class="job-list" aria-live="polite"></div>
+        </section>
+
+        <section id="profile" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Your matching profile</p>
+              <h2>Tell JobPulse what to hunt for</h2>
+            </div>
+            <button id="saveProfile" class="primary-btn">Save profile</button>
+          </div>
+
+          <form class="profile-grid">
+            <label>
+              Target titles
+              <textarea id="targetTitles" rows="4">Frontend Developer, React Developer, Full Stack Developer, Software Engineer</textarea>
+            </label>
+            <label>
+              Skills
+              <textarea id="skills" rows="4">React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs</textarea>
+            </label>
+            <label>
+              Preferred location
+              <input id="location" value="United States, Remote" />
+            </label>
+            <label>
+              Experience level
+              <select id="experience">
+                <option>Entry level</option>
+                <option selected>Junior to mid level</option>
+                <option>Senior level</option>
+              </select>
+            </label>
+            <label>
+              Salary target
+              <input id="salary" value="$80k+" />
+            </label>
+            <label>
+              Sponsorship
+              <select id="sponsorship">
+                <option>No sponsorship needed</option>
+                <option>Needs sponsorship</option>
+                <option>Open to sponsorship-friendly roles</option>
+              </select>
+            </label>
+          </form>
+        </section>
+
+        <section id="sources" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Trusted sources</p>
+              <h2>Choose where daily roles come from</h2>
+            </div>
+          </div>
+          <div id="sourceGrid" class="source-grid"></div>
+        </section>
+
+        <section id="tracker" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Applications</p>
+              <h2>Saved and applied jobs</h2>
+            </div>
+          </div>
+          <div id="trackerList" class="tracker-list"></div>
+        </section>
+      </section>
+    </main>
+
+    <template id="jobCardTemplate">
+      <article class="job-card">
+        <div class="job-main">
+          <div>
+            <div class="job-title-row">
+              <h3></h3>
+              <span class="badge"></span>
+            </div>
+            <p class="company"></p>
+            <p class="meta"></p>
+          </div>
+          <div class="score"></div>
+        </div>
+        <p class="summary"></p>
+        <div class="skill-row"></div>
+        <div class="job-actions">
+          <a class="apply-link" target="_blank" rel="noreferrer">Apply</a>
+          <button class="save-btn">Save</button>
+          <button class="applied-btn">Applied</button>
+          <button class="hide-btn">Hide</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
