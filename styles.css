@@ -350,6 +350,39 @@ textarea {
   font-weight: 800;
 }
 
+.fit-band {
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: #fff;
+  background: var(--muted);
+}
+
+.fit-band.band-perfect { background: var(--good); }
+.fit-band.band-strong { background: var(--accent); }
+.fit-band.band-moderate { background: var(--warn); }
+
+.sponsor {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent-3);
+}
+
+.sponsor strong { color: var(--accent-2); }
+
+.sponsor a {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tailor-btn {
+  border: 1px solid var(--accent) !important;
+  color: var(--accent) !important;
+  background: #eef5f3 !important;
+}
+
 .company,
 .meta,
 .summary {

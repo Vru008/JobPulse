@@ -153,11 +153,11 @@
           <form class="profile-grid">
             <label>
               Target titles
-              <textarea id="targetTitles" rows="4">Frontend Developer, React Developer, Full Stack Developer, Software Engineer</textarea>
+              <textarea id="targetTitles" rows="4">Frontend Developer, React Developer, Full Stack Developer, Software Engineer, UI/UX Engineer</textarea>
             </label>
             <label>
               Skills
-              <textarea id="skills" rows="4">React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs</textarea>
+              <textarea id="skills" rows="4">React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs, MongoDB, Express</textarea>
             </label>
             <label>
               Preferred location
@@ -176,12 +176,20 @@
               <input id="salary" value="$80k+" />
             </label>
             <label>
-              Sponsorship
+              Work authorization
               <select id="sponsorship">
+                <option selected>On F-1 OPT (authorized now), needs future H-1B sponsorship</option>
+                <option>Needs sponsorship now</option>
                 <option>No sponsorship needed</option>
-                <option>Needs sponsorship</option>
-                <option>Open to sponsorship-friendly roles</option>
               </select>
+            </label>
+            <label>
+              Portfolio / live project link (shown on every résumé + cover letter)
+              <input id="portfolio" value="https://job-mate-nu.vercel.app" />
+            </label>
+            <label>
+              Currently learning (honest — unlocks more roles)
+              <input id="learning" value="TypeScript, Next.js" />
             </label>
           </form>
         </section>
@@ -202,6 +210,7 @@
               <p class="eyebrow">Applications</p>
               <h2>Saved and applied jobs</h2>
             </div>
+            <button id="exportExcel" class="primary-btn" type="button">Export Excel tracker</button>
           </div>
           <div id="trackerList" class="tracker-list"></div>
         </section>
@@ -287,6 +296,7 @@
             <div class="job-title-row">
               <h3></h3>
               <span class="badge"></span>
+              <span class="fit-band"></span>
             </div>
             <p class="company"></p>
             <p class="meta"></p>
@@ -294,9 +304,11 @@
           <div class="score"></div>
         </div>
         <p class="summary"></p>
+        <p class="sponsor"></p>
         <div class="skill-row"></div>
         <div class="job-actions">
           <a class="apply-link" target="_blank" rel="noreferrer">Apply</a>
+          <button class="tailor-btn">Tailor résumé</button>
           <button class="save-btn">Save</button>
           <button class="applied-btn">Applied</button>
           <button class="hide-btn">Hide</button>
@@ -308,6 +320,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Excel tracker export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <script src="app.js"></script>
     <script src="resume.js"></script>

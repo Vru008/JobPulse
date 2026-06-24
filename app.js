@@ -32,12 +32,14 @@ let loadingJobs = false;
 
 const state = {
   profile: JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {
-    targetTitles: "Frontend Developer, React Developer, Full Stack Developer, Software Engineer",
-    skills: "React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs",
+    targetTitles: "Frontend Developer, React Developer, Full Stack Developer, Software Engineer, UI/UX Engineer",
+    skills: "React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs, MongoDB, Express",
     location: "United States, Remote",
     experience: "Junior to mid level",
     salary: "$80k+",
-    sponsorship: "No sponsorship needed",
+    sponsorship: "On F-1 OPT (authorized now), needs future H-1B sponsorship",
+    portfolio: "https://job-mate-nu.vercel.app",
+    learning: "TypeScript, Next.js",
   },
   enabledSources: JSON.parse(localStorage.getItem("jobpulse-sources") || "null") || sources.reduce((acc, source) => {
     acc[source.id] = source.enabled;
@@ -151,7 +153,8 @@ async function loadJobs() {
   renderJobs();
 
   const q = encodeURIComponent(state.profile.targetTitles || "");
-  const endpoints = [`/api/jobs?q=${q}`, `/.netlify/functions/jobs?q=${q}`];
+  const sk = encodeURIComponent(state.profile.skills || "");
+  const endpoints = [`/api/jobs?q=${q}&skills=${sk}`, `/.netlify/functions/jobs?q=${q}&skills=${sk}`];
   let data = null;
   for (const endpoint of endpoints) {
     try {
@@ -170,7 +173,11 @@ async function loadJobs() {
     return;
   }
 
-  jobs = data.jobs.map((j) => ({ ...j, role: classifyRole(j.title), match: computeMatch(j) }));
+  jobs = data.jobs.map((j) => ({
+    ...j,
+    role: classifyRole(j.title),
+    match: typeof j.fit === "number" ? j.fit : computeMatch(j),
+  }));
   renderRoles();
   renderAll();
 }
@@ -215,9 +222,37 @@ function renderJobs() {
     node.querySelector(".summary").textContent = job.summary || "Open the posting for full details.";
     node.querySelector(".skill-row").innerHTML = (job.skills || []).map((skill) => `<span>${skill}</span>`).join("");
 
+    // Fit band chip
+    const bandEl = node.querySelector(".fit-band");
+    if (bandEl) {
+      const band = job.fitBand || (job.match >= 90 ? "Perfect" : job.match >= 75 ? "Strong" : "Moderate");
+      bandEl.textContent = band;
+      bandEl.classList.add(`band-${band.toLowerCase()}`);
+    }
+
+    // Sponsorship: always VERIFY (silence != sponsorship)
+    const sponsorEl = node.querySelector(".sponsor");
+    if (sponsorEl && job.sponsorship) {
+      sponsorEl.innerHTML =
+        `Sponsorship: <strong>VERIFY</strong> · ${job.sponsorship.likelihood} · ` +
+        `<a href="${job.sponsorship.verifyUrl}" target="_blank" rel="noreferrer">check h1bdata</a>`;
+    }
+
     const applyLink = node.querySelector(".apply-link");
     applyLink.href = applyUrl(job);
     applyLink.textContent = "Apply";
+
+    const tailorBtn = node.querySelector(".tailor-btn");
+    if (tailorBtn) {
+      tailorBtn.addEventListener("click", () => {
+        sessionStorage.setItem("jobpulse-tailor", JSON.stringify({
+          company: job.company,
+          title: job.title,
+          jobDesc: `${job.title} at ${job.company}\nLocation: ${job.location}\n${job.summary || ""}\n\nFull posting: ${job.url}`,
+        }));
+        document.querySelector('.nav-item[data-view="resume"]').click();
+      });
+    }
 
     const saveBtn = node.querySelector(".save-btn");
     const appliedBtn = node.querySelector(".applied-btn");
@@ -359,8 +394,9 @@ elements.navItems.forEach((item) => {
 
 document.querySelector("#saveProfile").addEventListener("click", (event) => {
   event.preventDefault();
-  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship"].forEach((key) => {
-    state.profile[key] = document.querySelector(`#${key}`).value;
+  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship", "portfolio", "learning"].forEach((key) => {
+    const field = document.querySelector(`#${key}`);
+    if (field) state.profile[key] = field.value;
   });
   save("profile", state.profile);
   loadJobs();

@@ -98,7 +98,14 @@
     setStatus("Working…", `Tailoring your application to ${company}.`, "score-mid");
 
     try {
-      const requestBody = JSON.stringify({ resume, company, jobDescription: jobDesc });
+      const profile = (typeof state !== "undefined" && state.profile) || {};
+      const requestBody = JSON.stringify({
+        resume,
+        company,
+        jobDescription: jobDesc,
+        portfolio: profile.portfolio || "",
+        currentlyLearning: profile.learning || "",
+      });
       let res = null;
       let lastDetail = "";
 
@@ -119,7 +126,11 @@
       const data = await res.json();
       $("resumeTextOut").value = (data.resume || "").trim();
       $("coverTextOut").value = (data.coverLetter || "").trim();
-      setStatus("Done", `Tailored for ${company}. Edit if needed, then download PDF.`, "score-good");
+      const notes = Array.isArray(data.notes) ? data.notes : [];
+      const hint = notes.length
+        ? `Tailored for ${company}. ⚠ Fix before sending: ${notes.join(" • ")}`
+        : `Tailored for ${company}. Edit if needed, then download PDF.`;
+      setStatus("Done", hint, notes.length ? "score-mid" : "score-good");
     } catch (err) {
       console.error("AI generation failed:", err);
       setStatus(
@@ -213,15 +224,57 @@
     setTimeout(() => { btn.textContent = original; }, 1400);
   }
 
-  /* ---------- prefill company from a saved/applied job (nice-to-have) ---------- */
+  /* ---------- prefill from a dashboard "Tailor résumé" click ---------- */
 
-  function prefillCompany() {
+  function prefillFromDashboard() {
     try {
-      if (typeof state === "undefined" || typeof jobs === "undefined") return;
-      if ($("rCompany").value) return;
-      const target = jobs.find((j) => state.applied[j.id] || state.saved[j.id]);
-      if (target) $("rCompany").value = target.company;
+      const stash = sessionStorage.getItem("jobpulse-tailor");
+      if (stash) {
+        const t = JSON.parse(stash);
+        $("rCompany").value = t.company || "";
+        $("rJobDesc").value = t.jobDesc || "";
+        sessionStorage.removeItem("jobpulse-tailor");
+        setStatus("Ready", `Loaded ${t.title || "role"} at ${t.company}. Add your résumé, then Generate.`, "score-mid");
+        return;
+      }
+      if (typeof state !== "undefined" && typeof jobs !== "undefined" && !$("rCompany").value) {
+        const target = jobs.find((j) => state.applied[j.id] || state.saved[j.id]);
+        if (target) $("rCompany").value = target.company;
+      }
     } catch (_) { /* not ready */ }
+  }
+
+  /* ---------- Excel tracker export (4 sheets) ---------- */
+
+  function exportExcel() {
+    if (!window.XLSX) return;
+    const all = (typeof jobs !== "undefined" && Array.isArray(jobs)) ? jobs : [];
+    const st = (typeof state !== "undefined" && state) || { saved: {}, applied: {} };
+    const today = new Date().toISOString().slice(0, 10);
+
+    const shortlist = all.map((j) => ({
+      Title: j.title, Company: j.company, Location: j.location,
+      "Apply Link": j.url, "Fit Band": j.fitBand || "", "Fit %": j.match || j.fit || "",
+      "Skills Match": `${j.skillHits || 0}/${j.skillsTotal || 0} skills`,
+      "Sponsorship (VERIFY)": j.sponsorship ? j.sponsorship.likelihood : "VERIFY",
+      Status: st.applied[j.id] ? "Applied" : st.saved[j.id] ? "Saved" : "New",
+      "Date Found": today,
+    }));
+
+    const sponsorship = all.map((j) => ({
+      Company: j.company,
+      "h1bdata lookup": j.sponsorship ? j.sponsorship.verifyUrl : `https://h1bdata.info/index.php?em=${encodeURIComponent(j.company)}`,
+      "myvisajobs": `https://www.myvisajobs.com/search?q=${encodeURIComponent(j.company)}`,
+      "Likelihood (heuristic)": j.sponsorship ? j.sponsorship.likelihood : "Unknown",
+      Step: "Confirm recent H-1B filings before investing effort",
+    }));
+
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet(shortlist.length ? shortlist : [{ Note: "Load the dashboard first" }]), "Vetted Shortlist");
+    window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet([{ Note: "Borderline roles you flag go here" }]), "Flagged");
+    window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet([{ Note: "Excluded roles are filtered automatically by the feed (senior, no-sponsorship, contract, stack mismatch, staffing)" }]), "Excluded");
+    window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet(sponsorship.length ? sponsorship : [{ Note: "Load the dashboard first" }]), "Sponsorship Verification");
+    window.XLSX.writeFile(wb, `Vruttant_JobSearch_Tracker_${today}.xlsx`);
   }
 
   /* ---------- wiring ---------- */
@@ -243,8 +296,10 @@
     });
 
     document.querySelectorAll('.nav-item[data-view="resume"]').forEach((nav) => {
-      nav.addEventListener("click", prefillCompany);
+      nav.addEventListener("click", prefillFromDashboard);
     });
+
+    if ($("exportExcel")) $("exportExcel").addEventListener("click", exportExcel);
   }
 
   if (document.readyState === "loading") {
