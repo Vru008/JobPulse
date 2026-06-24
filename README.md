@@ -54,17 +54,31 @@ Local note: `py -m http.server` serves the static UI but the AI endpoint returns
 "Offline" (no functions). Use `vercel dev` or `netlify dev` to run the function locally.
 
 The app stores profile, saved jobs, applied jobs, and hidden jobs in browser
-local storage. A real daily job feed still needs a backend/cron worker, because
-static hosting alone cannot run scheduled imports every day.
+local storage.
+
+## Live job feed
+
+The dashboard shows **real** jobs, not sample data. `/api/jobs` (Vercel) /
+`/.netlify/functions/jobs` (Netlify), backed by `lib/jobs-core.js`, aggregates
+three free, no-key APIs server-side:
+
+- **Remotive** — curated remote software roles
+- **Arbeitnow** — open engineering job board
+- **Remote OK** — high-volume remote-first roles
+
+It filters to your target titles, **strictly dedupes** (by company+title and by
+canonical apply URL — no repeats), ranks by relevance then freshness, and returns
+**25**. Because it fetches live on each load (edge-cached ~30 min), the feed is
+fresh every morning with no cron job. Every "Apply" button opens the **original
+posting URL**. No key or env var is required for the feed.
 
 ## What is built
 
-- Daily job dashboard with match score, source, salary, location, and apply link.
+- Live daily dashboard (25 deduped real roles) with match score, source, salary, location, and real apply link.
+- AI Resume & Cover tab: tailor your résumé to a company + job, export PDF.
 - Editable profile for titles, skills, location, experience, salary, and sponsorship.
-- Trusted source toggles for LinkedIn, Indeed, Wellfound, Built In, Dice, We Work Remotely, Remote OK, Greenhouse, Lever, and Ashby.
-- Filters for role, work mode, minimum match, and text search.
+- Source toggles (Remotive, Arbeitnow, Remote OK), filters for role/mode/match/search.
 - Save, applied, and hide actions stored in browser local storage.
-- Real outbound links to trusted job boards or direct ATS search pages.
 
 ## Next Claude Code Prompt
 

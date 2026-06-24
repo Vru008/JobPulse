@@ -3,196 +3,32 @@ const authConfig = {
   passcodeHash: "9b30ac880d9dd2684f77afd4efed920c243ef214c4e0e23d7ce41a8d666561b6",
 };
 
+// Live feeds the dashboard aggregates (toggle on/off in the Sources tab).
+// Real jobs are fetched from /api/jobs, which pulls these free APIs server-side.
 const sources = [
   {
-    id: "linkedin",
-    name: "LinkedIn",
-    trust: "Large professional network with broad company coverage.",
+    id: "remotive",
+    name: "Remotive",
+    trust: "Curated remote software roles with direct apply links.",
     enabled: true,
-    search: (query, location) =>
-      `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`,
   },
   {
-    id: "indeed",
-    name: "Indeed",
-    trust: "High-volume general job board and salary visibility.",
+    id: "arbeitnow",
+    name: "Arbeitnow",
+    trust: "Open job board with fresh engineering postings worldwide.",
     enabled: true,
-    search: (query, location) =>
-      `https://www.indeed.com/jobs?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`,
-  },
-  {
-    id: "wellfound",
-    name: "Wellfound",
-    trust: "Startup roles with clear company and funding context.",
-    enabled: true,
-    search: (query) => `https://wellfound.com/jobs?keywords=${encodeURIComponent(query)}`,
-  },
-  {
-    id: "builtin",
-    name: "Built In",
-    trust: "Tech jobs from venture-backed and established companies.",
-    enabled: true,
-    search: (query) => `https://builtin.com/jobs?search=${encodeURIComponent(query)}`,
-  },
-  {
-    id: "dice",
-    name: "Dice",
-    trust: "Technology-focused roles with contract and full-time filters.",
-    enabled: true,
-    search: (query, location) =>
-      `https://www.dice.com/jobs?q=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`,
-  },
-  {
-    id: "weworkremotely",
-    name: "We Work Remotely",
-    trust: "Curated remote-first jobs across product and engineering.",
-    enabled: true,
-    search: (query) => `https://weworkremotely.com/remote-jobs/search?term=${encodeURIComponent(query)}`,
   },
   {
     id: "remoteok",
     name: "Remote OK",
-    trust: "Remote roles with fast-moving startup listings.",
+    trust: "High-volume remote-first roles from startups and scale-ups.",
     enabled: true,
-    search: (query) => `https://remoteok.com/remote-${encodeURIComponent(query.replaceAll(" ", "-"))}-jobs`,
-  },
-  {
-    id: "greenhouse",
-    name: "Greenhouse Boards",
-    trust: "Direct company postings from an applicant tracking system.",
-    enabled: true,
-    search: (query) => `https://www.google.com/search?q=${encodeURIComponent(`${query} site:boards.greenhouse.io`)}`,
-  },
-  {
-    id: "lever",
-    name: "Lever Boards",
-    trust: "Direct company postings from an applicant tracking system.",
-    enabled: true,
-    search: (query) => `https://www.google.com/search?q=${encodeURIComponent(`${query} site:jobs.lever.co`)}`,
-  },
-  {
-    id: "ashby",
-    name: "Ashby Boards",
-    trust: "Modern company career pages with accurate application links.",
-    enabled: true,
-    search: (query) => `https://www.google.com/search?q=${encodeURIComponent(`${query} site:jobs.ashbyhq.com`)}`,
   },
 ];
 
-const jobs = [
-  {
-    id: "job-1",
-    title: "Frontend Developer",
-    company: "Northstar Health",
-    source: "greenhouse",
-    location: "Remote, United States",
-    mode: "Remote",
-    posted: "Today",
-    salary: "$92k-$118k",
-    match: 94,
-    role: "Frontend Developer",
-    skills: ["React", "TypeScript", "REST APIs", "Accessibility"],
-    summary: "Build patient-facing dashboards with React, reusable components, and measurable accessibility improvements.",
-  },
-  {
-    id: "job-2",
-    title: "Junior Full Stack Engineer",
-    company: "CivicGrid",
-    source: "lever",
-    location: "New York, NY",
-    mode: "Hybrid",
-    posted: "Today",
-    salary: "$82k-$105k",
-    match: 88,
-    role: "Full Stack Developer",
-    skills: ["Next.js", "Node.js", "PostgreSQL", "APIs"],
-    summary: "Work across product features, API endpoints, and internal tools for a public-sector SaaS platform.",
-  },
-  {
-    id: "job-3",
-    title: "React Developer",
-    company: "LedgerLoop",
-    source: "builtin",
-    location: "Remote, United States",
-    mode: "Remote",
-    posted: "1 day ago",
-    salary: "$90k-$125k",
-    match: 91,
-    role: "React Developer",
-    skills: ["React", "JavaScript", "Design Systems", "Testing"],
-    summary: "Own frontend feature delivery for a finance operations product with a mature component library.",
-  },
-  {
-    id: "job-4",
-    title: "Software Engineer I",
-    company: "BrightCart",
-    source: "indeed",
-    location: "Austin, TX",
-    mode: "Onsite",
-    posted: "Today",
-    salary: "$78k-$96k",
-    match: 76,
-    role: "Software Engineer",
-    skills: ["JavaScript", "Node.js", "SQL", "Git"],
-    summary: "Join a commerce platform team shipping customer workflows, analytics surfaces, and backend integrations.",
-  },
-  {
-    id: "job-5",
-    title: "Remote Frontend Engineer",
-    company: "Atlas Labs",
-    source: "weworkremotely",
-    location: "Remote",
-    mode: "Remote",
-    posted: "2 days ago",
-    salary: "$85k-$120k",
-    match: 86,
-    role: "Frontend Developer",
-    skills: ["React", "Tailwind", "TypeScript", "Product UI"],
-    summary: "Create polished product surfaces for analytics customers with a small remote engineering team.",
-  },
-  {
-    id: "job-6",
-    title: "Associate Web Developer",
-    company: "BluePeak Media",
-    source: "linkedin",
-    location: "Chicago, IL",
-    mode: "Hybrid",
-    posted: "3 days ago",
-    salary: "$70k-$88k",
-    match: 72,
-    role: "Frontend Developer",
-    skills: ["JavaScript", "CSS", "React", "CMS"],
-    summary: "Support client web builds, landing pages, reusable UI patterns, and performance improvements.",
-  },
-  {
-    id: "job-7",
-    title: "Founding Full Stack Developer",
-    company: "SignalHire AI",
-    source: "wellfound",
-    location: "Remote, North America",
-    mode: "Remote",
-    posted: "Today",
-    salary: "$95k-$135k + equity",
-    match: 84,
-    role: "Full Stack Developer",
-    skills: ["Next.js", "Node.js", "AI APIs", "PostgreSQL"],
-    summary: "Build candidate matching tools and hiring workflows at an early-stage recruiting automation startup.",
-  },
-  {
-    id: "job-8",
-    title: "TypeScript UI Engineer",
-    company: "OpsRiver",
-    source: "ashby",
-    location: "Remote, United States",
-    mode: "Remote",
-    posted: "1 day ago",
-    salary: "$100k-$130k",
-    match: 89,
-    role: "Frontend Developer",
-    skills: ["TypeScript", "React", "Charts", "Testing"],
-    summary: "Develop operational dashboards with dense data tables, charts, and high-quality user interactions.",
-  },
-];
+// Populated at runtime from the live feed (was hardcoded sample data).
+let jobs = [];
+let loadingJobs = false;
 
 const state = {
   profile: JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {
@@ -211,6 +47,11 @@ const state = {
   applied: JSON.parse(localStorage.getItem("jobpulse-applied") || "{}"),
   hidden: JSON.parse(localStorage.getItem("jobpulse-hidden") || "{}"),
 };
+
+// Make sure every current feed has an on/off entry (handles older saved state).
+sources.forEach((source) => {
+  if (state.enabledSources[source.id] === undefined) state.enabledSources[source.id] = source.enabled;
+});
 
 const elements = {
   views: document.querySelectorAll(".view"),
@@ -253,9 +94,9 @@ async function sha256(value) {
 function unlockApp() {
   sessionStorage.setItem("jobpulse-authenticated", "true");
   document.body.classList.add("authenticated");
-  renderRoles();
   renderProfile();
   renderAll();
+  loadJobs();
 }
 
 function lockApp() {
@@ -274,9 +115,64 @@ function queryText() {
   return elements.searchInput.value.trim() || state.profile.targetTitles.split(",")[0].trim();
 }
 
+// Real jobs carry their own canonical apply URL.
 function applyUrl(job) {
-  const source = sourceById(job.source);
-  return source.search(`${job.title} ${job.company}`, job.location);
+  return job.url || "#";
+}
+
+// Coarse role bucket so the role filter stays useful across many live titles.
+function classifyRole(title) {
+  const t = (title || "").toLowerCase();
+  if (/full[\s-]?stack/.test(t)) return "Full Stack Developer";
+  if (/front[\s-]?end/.test(t) || /\breact\b|\bvue\b|\bangular\b|ui engineer/.test(t)) return "Frontend Developer";
+  if (/back[\s-]?end/.test(t)) return "Backend Developer";
+  if (/data|\bml\b|machine learning/.test(t)) return "Data / ML";
+  if (/devops|\bsre\b|infrastructure|platform|cloud/.test(t)) return "DevOps / Cloud";
+  if (/mobile|ios|android/.test(t)) return "Mobile Developer";
+  return "Software Engineer";
+}
+
+// Score a live job against the saved profile (skills + target titles).
+function computeMatch(job) {
+  const skills = (state.profile.skills || "").toLowerCase().split(/[,\n]+/).map((s) => s.trim()).filter(Boolean);
+  const titles = (state.profile.targetTitles || "").toLowerCase().split(/[,\n]+/).map((s) => s.trim()).filter(Boolean);
+  const hay = `${job.title} ${(job.skills || []).join(" ")} ${job.summary || ""}`.toLowerCase();
+
+  let hits = 0;
+  skills.forEach((s) => { if (s && hay.includes(s)) hits += 1; });
+  const base = skills.length ? (hits / skills.length) * 100 : 50;
+  const titleBoost = titles.some((t) => t && job.title.toLowerCase().includes(t.split(" ")[0])) ? 12 : 0;
+  return Math.max(62, Math.min(98, Math.round(base * 0.5 + 45 + titleBoost)));
+}
+
+// Fetch the live feed (Vercel first, Netlify fallback) and render.
+async function loadJobs() {
+  loadingJobs = true;
+  renderJobs();
+
+  const q = encodeURIComponent(state.profile.targetTitles || "");
+  const endpoints = [`/api/jobs?q=${q}`, `/.netlify/functions/jobs?q=${q}`];
+  let data = null;
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint);
+      if (res.ok) { data = await res.json(); break; }
+    } catch (_) { /* try next endpoint */ }
+  }
+
+  loadingJobs = false;
+
+  if (!data || !Array.isArray(data.jobs) || !data.jobs.length) {
+    jobs = [];
+    elements.jobList.innerHTML =
+      '<div class="tracker-empty">Could not load live jobs right now. Tap “Refresh now” in a moment.</div>';
+    renderMetrics([]);
+    return;
+  }
+
+  jobs = data.jobs.map((j) => ({ ...j, role: classifyRole(j.title), match: computeMatch(j) }));
+  renderRoles();
+  renderAll();
 }
 
 function visibleJobs() {
@@ -286,20 +182,20 @@ function visibleJobs() {
   const search = elements.searchInput.value.toLowerCase().trim();
 
   return jobs
-    .filter((job) => state.enabledSources[job.source])
+    .filter((job) => state.enabledSources[job.source] !== false)
     .filter((job) => !state.hidden[job.id])
     .filter((job) => job.match >= minMatch)
     .filter((job) => role === "all" || job.role === role)
     .filter((job) => mode === "all" || job.mode === mode)
     .filter((job) => {
       if (!search) return true;
-      return [job.title, job.company, job.location, job.source, ...job.skills].join(" ").toLowerCase().includes(search);
+      return [job.title, job.company, job.location, job.source, ...(job.skills || [])].join(" ").toLowerCase().includes(search);
     })
     .sort((a, b) => b.match - a.match);
 }
 
 function renderMetrics(list) {
-  const enabledCount = sources.filter((source) => state.enabledSources[source.id]).length;
+  const enabledCount = sources.filter((source) => state.enabledSources[source.id] !== false).length;
   elements.newToday.textContent = list.filter((job) => job.posted === "Today").length;
   elements.bestMatch.textContent = `${list[0]?.match || 0}%`;
   elements.sourceCount.textContent = enabledCount;
@@ -312,12 +208,12 @@ function renderJobs() {
   list.forEach((job) => {
     const node = elements.template.content.cloneNode(true);
     node.querySelector("h3").textContent = job.title;
-    node.querySelector(".badge").textContent = sourceById(job.source).name;
+    node.querySelector(".badge").textContent = sourceById(job.source)?.name || job.sourceName || job.source;
     node.querySelector(".company").textContent = job.company;
-    node.querySelector(".meta").textContent = `${job.location} | ${job.mode} | ${job.salary} | ${job.posted}`;
+    node.querySelector(".meta").textContent = [job.location, job.mode, job.salary, job.posted].filter(Boolean).join(" | ");
     node.querySelector(".score").textContent = `${job.match}%`;
-    node.querySelector(".summary").textContent = job.summary;
-    node.querySelector(".skill-row").innerHTML = job.skills.map((skill) => `<span>${skill}</span>`).join("");
+    node.querySelector(".summary").textContent = job.summary || "Open the posting for full details.";
+    node.querySelector(".skill-row").innerHTML = (job.skills || []).map((skill) => `<span>${skill}</span>`).join("");
 
     const applyLink = node.querySelector(".apply-link");
     applyLink.href = applyUrl(job);
@@ -354,7 +250,9 @@ function renderJobs() {
   });
 
   if (!list.length) {
-    elements.jobList.innerHTML = '<div class="tracker-empty">No matches with these filters. Lower the match score or turn on more sources.</div>';
+    elements.jobList.innerHTML = loadingJobs
+      ? '<div class="tracker-empty">Loading fresh roles…</div>'
+      : '<div class="tracker-empty">No matches with these filters. Lower the match score or turn on more sources.</div>';
   }
 
   renderMetrics(list);
@@ -368,12 +266,12 @@ function renderSources() {
     card.innerHTML = `
       <header>
         <h3>${source.name}</h3>
-        <button class="switch ${state.enabledSources[source.id] ? "active" : ""}" aria-label="Toggle ${source.name}"></button>
+        <button class="switch ${state.enabledSources[source.id] !== false ? "active" : ""}" aria-label="Toggle ${source.name}"></button>
       </header>
       <p>${source.trust}</p>
     `;
     card.querySelector("button").addEventListener("click", () => {
-      state.enabledSources[source.id] = !state.enabledSources[source.id];
+      state.enabledSources[source.id] = state.enabledSources[source.id] === false;
       save("sources", state.enabledSources);
       renderAll();
     });
@@ -401,7 +299,7 @@ function renderTracker() {
             <span class="badge">${state.applied[job.id] ? "Applied" : "Saved"}</span>
           </div>
           <p class="company">${job.company}</p>
-          <p class="meta">${job.location} | ${sourceById(job.source).name} | ${job.match}% match</p>
+          <p class="meta">${job.location} | ${sourceById(job.source)?.name || job.sourceName || ""} | ${job.match}% match</p>
         </div>
         <a class="primary-btn" href="${applyUrl(job)}" target="_blank" rel="noreferrer">Open</a>
       </div>
@@ -419,6 +317,7 @@ function renderProfile() {
 
 function renderRoles() {
   const roles = [...new Set(jobs.map((job) => job.role))];
+  const current = elements.roleFilter.value;
   elements.roleFilter.innerHTML = '<option value="all">All roles</option>';
   roles.forEach((role) => {
     const option = document.createElement("option");
@@ -426,12 +325,13 @@ function renderRoles() {
     option.textContent = role;
     elements.roleFilter.appendChild(option);
   });
+  if ([...elements.roleFilter.options].some((o) => o.value === current)) elements.roleFilter.value = current;
 }
 
 function updateSearchLink() {
-  const activeSources = sources.filter((source) => state.enabledSources[source.id]);
-  const source = activeSources[0] || sources[0];
-  elements.multiSearchLink.href = source.search(queryText(), state.profile.location);
+  const query = queryText();
+  elements.multiSearchLink.href =
+    `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(state.profile.location || "")}`;
 }
 
 function renderAll() {
@@ -463,13 +363,13 @@ document.querySelector("#saveProfile").addEventListener("click", (event) => {
     state.profile[key] = document.querySelector(`#${key}`).value;
   });
   save("profile", state.profile);
-  renderAll();
+  loadJobs();
 });
 
 document.querySelector("#refreshBtn").addEventListener("click", () => {
   state.hidden = {};
   save("hidden", state.hidden);
-  renderAll();
+  loadJobs();
 });
 
 elements.loginForm.addEventListener("submit", async (event) => {
