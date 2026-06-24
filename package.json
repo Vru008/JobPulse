@@ -6,5 +6,8 @@
   "scripts": {
     "dev": "py -m http.server 5173",
     "start": "py -m http.server 5173"
+  },
+  "dependencies": {
+    "mongodb": "^6.3.0"
   }
 }

@@ -81,6 +81,70 @@ const elements = {
 
 function save(key, value) {
   localStorage.setItem(`jobpulse-${key}`, JSON.stringify(value));
+  syncPush();
+}
+
+/* ---------- cross-device sync (MongoDB via /api/state) ---------- */
+
+const SYNC_ENDPOINTS = ["/api/state", "/.netlify/functions/state"];
+
+function syncToken() {
+  return sessionStorage.getItem("jobpulse-pass") || "";
+}
+
+// Pull the cloud copy on login and make it the source of truth on this device.
+async function syncPull() {
+  const token = syncToken();
+  if (!token) return;
+  for (const endpoint of SYNC_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, { headers: { "x-jobpulse-pass": token } });
+      if (!res.ok) continue;
+      const { data } = await res.json();
+      if (data) {
+        if (data.saved) state.saved = data.saved;
+        if (data.applied) state.applied = data.applied;
+        if (data.hidden) state.hidden = data.hidden;
+        if (data.enabledSources) state.enabledSources = data.enabledSources;
+        if (data.profile) state.profile = { ...state.profile, ...data.profile };
+        // Persist locally WITHOUT echoing back to the server.
+        ["saved", "applied", "hidden"].forEach((k) =>
+          localStorage.setItem(`jobpulse-${k}`, JSON.stringify(state[k])));
+        localStorage.setItem("jobpulse-sources", JSON.stringify(state.enabledSources));
+        localStorage.setItem("jobpulse-profile", JSON.stringify(state.profile));
+        renderProfile();
+        renderAll();
+      }
+      return; // a reachable endpoint answered
+    } catch (_) { /* try next / stay local */ }
+  }
+}
+
+// Debounced push of the full state blob after any change.
+let syncTimer = null;
+function syncPush() {
+  const token = syncToken();
+  if (!token) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    const data = {
+      saved: state.saved,
+      applied: state.applied,
+      hidden: state.hidden,
+      enabledSources: state.enabledSources,
+      profile: state.profile,
+    };
+    for (const endpoint of SYNC_ENDPOINTS) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-jobpulse-pass": token },
+          body: JSON.stringify({ data }),
+        });
+        if (res.ok) return;
+      } catch (_) { /* try next / stay local */ }
+    }
+  }, 600);
 }
 
 function isAuthenticated() {
@@ -98,6 +162,7 @@ function unlockApp() {
   document.body.classList.add("authenticated");
   renderProfile();
   renderAll();
+  syncPull();
   loadJobs();
 }
 
@@ -417,6 +482,7 @@ elements.loginForm.addEventListener("submit", async (event) => {
   const passcodeHash = await sha256(passcode);
 
   if (username === authConfig.username && passcodeHash === authConfig.passcodeHash) {
+    sessionStorage.setItem("jobpulse-pass", passcode); // used as the sync auth token
     unlockApp();
     return;
   }
