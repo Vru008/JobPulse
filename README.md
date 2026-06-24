@@ -60,11 +60,20 @@ local storage.
 
 The dashboard shows **real** jobs, not sample data. `/api/jobs` (Vercel) /
 `/.netlify/functions/jobs` (Netlify), backed by `lib/jobs-core.js`, aggregates
-three free, no-key APIs server-side:
+free, no-key sources server-side:
 
-- **Remotive** — curated remote software roles
-- **Arbeitnow** — open engineering job board
-- **Remote OK** — high-volume remote-first roles
+- **ATS company boards** — Greenhouse, Lever, Ashby for ~55 established,
+  sponsor-friendlier companies (Stripe, Robinhood, Affirm, Figma, Cloudflare,
+  Reddit, …) with **direct apply links**
+- **Remotive**, **Arbeitnow**, **Remote OK**, **Jobicy**, **Himalayas** — broad
+  remote software roles
+
+It excludes senior/lead, no-sponsorship/citizenship/clearance, intern/contract,
+stack-mismatch, and staffing-firm roles; scores a fit band; marks every role
+**Sponsorship: VERIFY**; prefers US/remote; caps 2 per company. LinkedIn, Indeed,
+Glassdoor, and YC are intentionally omitted — they block fetching and forbid
+scraping (no free API). To add Indeed-style breadth legally, plug in the free
+Adzuna API (set `ADZUNA_APP_ID` / `ADZUNA_APP_KEY`).
 
 It filters to your target titles, **strictly dedupes** (by company+title and by
 canonical apply URL — no repeats), ranks by relevance then freshness, and returns
