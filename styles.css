@@ -499,6 +499,160 @@ textarea {
   text-align: center;
 }
 
+/* ---- Resume & cover letter ---- */
+.resume-note {
+  max-width: 760px;
+  margin: -8px 0 20px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.resume-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.resume-form,
+.resume-output {
+  display: grid;
+  gap: 16px;
+}
+
+.resume-fieldset {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.resume-legend {
+  color: var(--accent-2);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.file-drop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  border: 1.5px dashed var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: #fbfcfa;
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.file-drop:hover {
+  border-color: var(--accent);
+}
+
+.file-drop-cta {
+  display: inline-grid;
+  place-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: var(--accent-3);
+  color: #fff;
+  font-weight: 800;
+}
+
+.file-drop-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.resume-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ats-score {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: #eef5f3;
+  box-shadow: var(--shadow);
+}
+
+.ats-score span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.ats-score strong {
+  font-size: 2.1rem;
+  color: var(--accent);
+}
+
+.ats-score strong.score-good { color: var(--good); }
+.ats-score strong.score-mid { color: var(--warn); }
+.ats-score strong.score-low { color: var(--accent-2); }
+
+.ats-score p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.doc-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.doc-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.doc-card h3 {
+  margin-bottom: 0;
+  font-size: 1.1rem;
+}
+
+.doc-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.doc-actions .ghost-btn {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 0.84rem;
+}
+
+.doc-text {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  color: var(--ink);
+  background: #fbfcfa;
+  font-family: ui-monospace, "Cascadia Code", "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 @media (max-width: 920px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -534,7 +688,9 @@ textarea {
 
   .metrics,
   .controls,
-  .profile-grid {
+  .profile-grid,
+  .resume-layout,
+  .resume-grid {
     grid-template-columns: 1fr;
   }
 }

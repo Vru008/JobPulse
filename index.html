@@ -3,7 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>JobPulse</title>
+    <title>JobPulse — Fresh roles &amp; ATS-ready resumes</title>
+    <meta name="description" content="Your private daily job cockpit: fresh role matches every morning plus ATS-ready resumes and cover letters." />
+    <meta name="theme-color" content="#203335" />
+
+    <!-- Favicons -->
+    <link rel="icon" href="assets/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+    <!-- Social share preview -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="JobPulse — Fresh roles &amp; ATS-ready resumes" />
+    <meta property="og:description" content="Fresh role matches every morning plus ATS-ready resumes and cover letters." />
+    <meta property="og:image" content="assets/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="JobPulse — Fresh roles &amp; ATS-ready resumes" />
+    <meta name="twitter:description" content="Fresh role matches every morning plus ATS-ready resumes and cover letters." />
+    <meta name="twitter:image" content="assets/og-image.png" />
+
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -45,6 +66,7 @@
 
         <nav aria-label="Primary navigation">
           <button class="nav-item active" data-view="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="resume">Resume &amp; Cover</button>
           <button class="nav-item" data-view="profile">Profile</button>
           <button class="nav-item" data-view="sources">Sources</button>
           <button class="nav-item" data-view="tracker">Tracker</button>
@@ -183,6 +205,78 @@
           </div>
           <div id="trackerList" class="tracker-list"></div>
         </section>
+
+        <section id="resume" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">AI resume &amp; cover letter</p>
+              <h2>Tailored to the company, ready to upload</h2>
+            </div>
+            <button id="generateDocs" class="primary-btn" type="button">Generate documents</button>
+          </div>
+
+          <p class="resume-note">
+            Give your current résumé, the company name, and the job description. AI
+            rewrites both into an ATS-strong résumé and a matching cover letter, then
+            exports clean PDFs you can upload straight into an application.
+          </p>
+
+          <div class="resume-layout">
+            <form class="resume-form" id="resumeForm">
+              <div class="resume-fieldset">
+                <span class="resume-legend">1 · Your current résumé</span>
+                <label class="file-drop" for="rFile">
+                  <input id="rFile" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
+                  <span class="file-drop-cta">Upload PDF or Word</span>
+                  <span class="file-drop-name" id="rFileName">No file chosen — or paste below</span>
+                </label>
+                <label>…or paste your résumé text
+                  <textarea id="rResumeText" rows="7" placeholder="Paste your existing résumé here if you prefer not to upload."></textarea>
+                </label>
+              </div>
+
+              <div class="resume-fieldset">
+                <span class="resume-legend">2 · The role</span>
+                <label class="search-box">Company name
+                  <input id="rCompany" type="search" placeholder="e.g. Northstar Health" />
+                </label>
+                <label>Job description
+                  <textarea id="rJobDesc" rows="7" placeholder="Paste the full job posting. The résumé is tailored to match its requirements and keywords."></textarea>
+                </label>
+              </div>
+            </form>
+
+            <div class="resume-output">
+              <div class="ats-score" id="atsStatus">
+                <span>Status</span>
+                <strong id="atsScoreValue">Ready</strong>
+                <p id="atsScoreHint">Add your résumé, a company, and the job description, then Generate.</p>
+              </div>
+
+              <div class="doc-card">
+                <header>
+                  <h3>Résumé</h3>
+                  <div class="doc-actions">
+                    <button type="button" class="ghost-btn" data-copy="resumeTextOut">Copy</button>
+                    <button type="button" class="ghost-btn" data-pdf="resume">Download PDF</button>
+                  </div>
+                </header>
+                <textarea id="resumeTextOut" class="doc-text" rows="18" spellcheck="false" placeholder="Your tailored résumé appears here. You can edit before downloading."></textarea>
+              </div>
+
+              <div class="doc-card">
+                <header>
+                  <h3>Cover letter</h3>
+                  <div class="doc-actions">
+                    <button type="button" class="ghost-btn" data-copy="coverTextOut">Copy</button>
+                    <button type="button" class="ghost-btn" data-pdf="cover">Download PDF</button>
+                  </div>
+                </header>
+                <textarea id="coverTextOut" class="doc-text" rows="14" spellcheck="false" placeholder="Your tailored cover letter appears here. You can edit before downloading."></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
       </section>
     </main>
 
@@ -210,6 +304,12 @@
       </article>
     </template>
 
+    <!-- Résumé tooling: PDF/Word text extraction + PDF export (all client-side) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <script src="app.js"></script>
+    <script src="resume.js"></script>
   </body>
 </html>
