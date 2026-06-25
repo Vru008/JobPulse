@@ -33,6 +33,18 @@ let loadingJobs = false;
 let globalJobs = [];
 let loadingGlobal = false;
 let globalLoaded = false;
+let lastJobDay = ""; // tracks the current "8 AM batch" for auto-refresh
+
+// A new batch of roles each morning at 8 AM local time. Before 8 AM we still
+// show yesterday's batch; at/after 8 AM the seed flips, so the feed refreshes.
+function jobDaySeed() {
+  const now = new Date();
+  const ref = new Date(now);
+  if (now.getHours() < 8) ref.setDate(ref.getDate() - 1);
+  const m = String(ref.getMonth() + 1).padStart(2, "0");
+  const d = String(ref.getDate()).padStart(2, "0");
+  return `${ref.getFullYear()}-${m}-${d}-8am`;
+}
 
 const state = {
   profile: JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {
@@ -223,9 +235,10 @@ async function loadJobs(force = false) {
 
   const q = encodeURIComponent(state.profile.targetTitles || "");
   const sk = encodeURIComponent(state.profile.skills || "");
-  // Daily seed => a fresh rotation each morning (and a per-day cache key).
-  // "Refresh now" passes a timestamp seed to re-roll immediately, bypassing cache.
-  const seed = force ? `r${Date.now()}` : new Date().toISOString().slice(0, 10);
+  // 8 AM-local daily seed => a fresh rotation each morning (and a per-day cache
+  // key). "Refresh now" passes a timestamp seed to re-roll immediately.
+  const seed = force ? `r${Date.now()}` : jobDaySeed();
+  if (!force) lastJobDay = jobDaySeed();
   const qs = `q=${q}&skills=${sk}&seed=${encodeURIComponent(seed)}`;
   const endpoints = [`/api/jobs?${qs}`, `/.netlify/functions/jobs?${qs}`];
   let data = null;
@@ -395,7 +408,7 @@ async function loadGlobalJobs(force = false) {
 
   const q = encodeURIComponent(state.profile.targetTitles || "");
   const sk = encodeURIComponent(state.profile.skills || "");
-  const seed = force ? `r${Date.now()}` : new Date().toISOString().slice(0, 10);
+  const seed = force ? `r${Date.now()}` : jobDaySeed();
   const qs = `q=${q}&skills=${sk}&seed=${encodeURIComponent(seed)}&scope=global`;
   const endpoints = [`/api/jobs?${qs}`, `/.netlify/functions/jobs?${qs}`];
   let data = null;
@@ -538,6 +551,20 @@ const refreshGlobalBtn = document.querySelector("#refreshGlobalBtn");
 if (refreshGlobalBtn) {
   refreshGlobalBtn.addEventListener("click", () => loadGlobalJobs(true));
 }
+
+// Automatic morning refresh: when the 8 AM batch rolls over (or the tab is
+// reopened on a new day), reload the feed with no manual action.
+function maybeAutoRefresh() {
+  if (!isAuthenticated()) return;
+  if (lastJobDay && jobDaySeed() !== lastJobDay) {
+    loadJobs();
+    if (globalLoaded) loadGlobalJobs();
+  }
+}
+setInterval(maybeAutoRefresh, 5 * 60 * 1000); // check every 5 minutes
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") maybeAutoRefresh();
+});
 
 elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
