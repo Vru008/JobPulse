@@ -29,6 +29,10 @@ const sources = [
 // Populated at runtime from the live feed (was hardcoded sample data).
 let jobs = [];
 let loadingJobs = false;
+// Global "visa-sponsoring, outside USA" feed (separate tab).
+let globalJobs = [];
+let loadingGlobal = false;
+let globalLoaded = false;
 
 const state = {
   profile: JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {
@@ -278,80 +282,88 @@ function renderMetrics(list) {
   elements.readyCount.textContent = list.length;
 }
 
-function renderJobs() {
-  const list = visibleJobs();
-  elements.jobList.innerHTML = "";
-  list.forEach((job) => {
-    const node = elements.template.content.cloneNode(true);
-    node.querySelector("h3").textContent = job.title;
-    node.querySelector(".badge").textContent = sourceById(job.source)?.name || job.sourceName || job.source;
-    node.querySelector(".company").textContent = job.company;
-    node.querySelector(".meta").textContent = [job.location, job.mode, job.salary, job.posted].filter(Boolean).join(" | ");
-    node.querySelector(".score").textContent = `${job.match}%`;
-    node.querySelector(".summary").textContent = job.summary || "Open the posting for full details.";
-    node.querySelector(".skill-row").innerHTML = (job.skills || []).map((skill) => `<span>${skill}</span>`).join("");
+// Build one job card (shared by the US dashboard and the Global Visa tab).
+function createJobCard(job) {
+  const node = elements.template.content.cloneNode(true);
+  node.querySelector("h3").textContent = job.title;
+  node.querySelector(".badge").textContent = sourceById(job.source)?.name || job.sourceName || job.source;
+  node.querySelector(".company").textContent = job.company;
+  node.querySelector(".meta").textContent = [job.location, job.mode, job.salary, job.posted].filter(Boolean).join(" | ");
+  node.querySelector(".score").textContent = `${job.match}%`;
+  node.querySelector(".summary").textContent = job.summary || "Open the posting for full details.";
+  node.querySelector(".skill-row").innerHTML = (job.skills || []).map((skill) => `<span>${skill}</span>`).join("");
 
-    // Fit band chip
-    const bandEl = node.querySelector(".fit-band");
-    if (bandEl) {
-      const band = job.fitBand || (job.match >= 90 ? "Perfect" : job.match >= 75 ? "Strong" : "Moderate");
-      bandEl.textContent = band;
-      bandEl.classList.add(`band-${band.toLowerCase()}`);
-    }
+  const bandEl = node.querySelector(".fit-band");
+  if (bandEl) {
+    const band = job.fitBand || (job.match >= 90 ? "Perfect" : job.match >= 75 ? "Strong" : "Moderate");
+    bandEl.textContent = band;
+    bandEl.classList.add(`band-${band.toLowerCase()}`);
+  }
 
-    // Sponsorship: always VERIFY (silence != sponsorship)
-    const sponsorEl = node.querySelector(".sponsor");
-    if (sponsorEl && job.sponsorship) {
+  // Sponsorship line — US roles point to h1bdata; global roles to the employer.
+  const sponsorEl = node.querySelector(".sponsor");
+  if (sponsorEl) {
+    if (job.isGlobal) {
+      sponsorEl.innerHTML =
+        `Work visa: <strong>VERIFY with employer</strong> · ` +
+        `${job.visaSponsor ? "sponsorship mentioned in posting" : "visa-friendly country"}`;
+    } else if (job.sponsorship) {
       sponsorEl.innerHTML =
         `Sponsorship: <strong>VERIFY</strong> · ${job.sponsorship.likelihood} · ` +
         `<a href="${job.sponsorship.verifyUrl}" target="_blank" rel="noreferrer">check h1bdata</a>`;
     }
+  }
 
-    const applyLink = node.querySelector(".apply-link");
-    applyLink.href = applyUrl(job);
-    applyLink.textContent = "Apply";
+  const applyLink = node.querySelector(".apply-link");
+  applyLink.href = applyUrl(job);
+  applyLink.textContent = "Apply";
 
-    const tailorBtn = node.querySelector(".tailor-btn");
-    if (tailorBtn) {
-      tailorBtn.addEventListener("click", () => {
-        sessionStorage.setItem("jobpulse-tailor", JSON.stringify({
-          company: job.company,
-          title: job.title,
-          jobDesc: `${job.title} at ${job.company}\nLocation: ${job.location}\n${job.summary || ""}\n\nFull posting: ${job.url}`,
-        }));
-        document.querySelector('.nav-item[data-view="resume"]').click();
-      });
-    }
-
-    const saveBtn = node.querySelector(".save-btn");
-    const appliedBtn = node.querySelector(".applied-btn");
-    const hideBtn = node.querySelector(".hide-btn");
-
-    saveBtn.classList.toggle("active", Boolean(state.saved[job.id]));
-    appliedBtn.classList.toggle("active", Boolean(state.applied[job.id]));
-
-    saveBtn.addEventListener("click", () => {
-      state.saved[job.id] = !state.saved[job.id];
-      save("saved", state.saved);
-      renderAll();
+  const tailorBtn = node.querySelector(".tailor-btn");
+  if (tailorBtn) {
+    tailorBtn.addEventListener("click", () => {
+      sessionStorage.setItem("jobpulse-tailor", JSON.stringify({
+        company: job.company,
+        title: job.title,
+        jobDesc: `${job.title} at ${job.company}\nLocation: ${job.location}\n${job.summary || ""}\n\nFull posting: ${job.url}`,
+      }));
+      document.querySelector('.nav-item[data-view="resume"]').click();
     });
+  }
 
-    appliedBtn.addEventListener("click", () => {
-      state.applied[job.id] = !state.applied[job.id];
-      state.saved[job.id] = true;
-      save("applied", state.applied);
-      save("saved", state.saved);
-      renderAll();
-    });
+  const saveBtn = node.querySelector(".save-btn");
+  const appliedBtn = node.querySelector(".applied-btn");
+  const hideBtn = node.querySelector(".hide-btn");
 
-    hideBtn.addEventListener("click", () => {
-      state.hidden[job.id] = true;
-      save("hidden", state.hidden);
-      renderAll();
-    });
+  saveBtn.classList.toggle("active", Boolean(state.saved[job.id]));
+  appliedBtn.classList.toggle("active", Boolean(state.applied[job.id]));
 
-    elements.jobList.appendChild(node);
+  saveBtn.addEventListener("click", () => {
+    state.saved[job.id] = !state.saved[job.id];
+    save("saved", state.saved);
+    renderAll();
   });
+
+  appliedBtn.addEventListener("click", () => {
+    state.applied[job.id] = !state.applied[job.id];
+    state.saved[job.id] = true;
+    save("applied", state.applied);
+    save("saved", state.saved);
+    renderAll();
+  });
+
+  hideBtn.addEventListener("click", () => {
+    state.hidden[job.id] = true;
+    save("hidden", state.hidden);
+    renderAll();
+  });
+
+  return node;
+}
+
+function renderJobs() {
+  const list = visibleJobs();
+  elements.jobList.innerHTML = "";
+  list.forEach((job) => elements.jobList.appendChild(createJobCard(job)));
 
   if (!list.length) {
     elements.jobList.innerHTML = loadingJobs
@@ -360,6 +372,48 @@ function renderJobs() {
   }
 
   renderMetrics(list);
+}
+
+function renderGlobal() {
+  const el = document.querySelector("#globalList");
+  if (!el) return;
+  const list = globalJobs.filter((job) => !state.hidden[job.id]);
+  el.innerHTML = "";
+  list.forEach((job) => el.appendChild(createJobCard(job)));
+  if (!list.length) {
+    el.innerHTML = loadingGlobal
+      ? '<div class="tracker-empty">Finding visa-sponsoring roles around the world…</div>'
+      : '<div class="tracker-empty">No international visa-friendly matches right now. Try “Refresh now” later.</div>';
+  }
+}
+
+// Load the global (outside-USA, visa-friendly) feed on demand.
+async function loadGlobalJobs(force = false) {
+  loadingGlobal = true;
+  globalLoaded = true;
+  renderGlobal();
+
+  const q = encodeURIComponent(state.profile.targetTitles || "");
+  const sk = encodeURIComponent(state.profile.skills || "");
+  const seed = force ? `r${Date.now()}` : new Date().toISOString().slice(0, 10);
+  const qs = `q=${q}&skills=${sk}&seed=${encodeURIComponent(seed)}&scope=global`;
+  const endpoints = [`/api/jobs?${qs}`, `/.netlify/functions/jobs?${qs}`];
+  let data = null;
+  for (const endpoint of endpoints) {
+    try {
+      const res = await fetch(endpoint);
+      if (res.ok) { data = await res.json(); break; }
+    } catch (_) { /* try next */ }
+  }
+
+  loadingGlobal = false;
+  globalJobs = (data && Array.isArray(data.jobs) ? data.jobs : []).map((j) => ({
+    ...j,
+    isGlobal: true,
+    role: classifyRole(j.title),
+    match: typeof j.fit === "number" ? j.fit : 70,
+  }));
+  renderGlobal();
 }
 
 function renderSources() {
@@ -442,6 +496,7 @@ function renderAll() {
   elements.matchLabel.textContent = `${elements.matchFilter.value}%`;
   updateSearchLink();
   renderJobs();
+  if (globalLoaded) renderGlobal();
   renderSources();
   renderTracker();
 }
@@ -452,6 +507,8 @@ elements.navItems.forEach((item) => {
     elements.views.forEach((view) => view.classList.remove("active"));
     item.classList.add("active");
     document.querySelector(`#${item.dataset.view}`).classList.add("active");
+    // Lazy-load the global feed the first time its tab is opened.
+    if (item.dataset.view === "global" && !globalLoaded) loadGlobalJobs();
   });
 });
 
@@ -476,6 +533,11 @@ document.querySelector("#refreshBtn").addEventListener("click", () => {
   save("hidden", state.hidden);
   loadJobs(true);
 });
+
+const refreshGlobalBtn = document.querySelector("#refreshGlobalBtn");
+if (refreshGlobalBtn) {
+  refreshGlobalBtn.addEventListener("click", () => loadGlobalJobs(true));
+}
 
 elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();

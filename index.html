@@ -65,7 +65,8 @@
         </div>
 
         <nav aria-label="Primary navigation">
-          <button class="nav-item active" data-view="dashboard">Dashboard</button>
+          <button class="nav-item active" data-view="dashboard">Dashboard (USA)</button>
+          <button class="nav-item" data-view="global">Global Visa</button>
           <button class="nav-item" data-view="resume">Resume &amp; Cover</button>
           <button class="nav-item" data-view="profile">Profile</button>
           <button class="nav-item" data-view="sources">Sources</button>
@@ -139,6 +140,23 @@
           </div>
 
           <div id="jobList" class="job-list" aria-live="polite"></div>
+        </section>
+
+        <section id="global" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Outside the USA · visa sponsorship</p>
+              <h2>Work-visa roles for immigrants worldwide</h2>
+            </div>
+            <button id="refreshGlobalBtn" class="primary-btn" type="button">Refresh</button>
+          </div>
+          <p class="resume-note">
+            Frontend / full-stack roles in countries with skilled-worker visa
+            pathways — Germany (EU Blue Card), Canada (Express Entry), Netherlands
+            (Highly Skilled Migrant), UK (Skilled Worker), Ireland, Australia, and
+            more. Always VERIFY sponsorship directly with the employer.
+          </p>
+          <div id="globalList" class="job-list" aria-live="polite"></div>
         </section>
 
         <section id="profile" class="view">
