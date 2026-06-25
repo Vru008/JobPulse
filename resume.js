@@ -147,62 +147,89 @@
 
   /* ---------- PDF export (clean, single-column, ATS-safe) ---------- */
 
+  // Replace non-ASCII punctuation so standard PDF fonts render cleanly (no "?").
+  function sanitize(text) {
+    return text
+      .replace(/\r/g, "")
+      .replace(/[–—‒]/g, "-")
+      .replace(/[‘’‚′]/g, "'")
+      .replace(/[“”„″]/g, '"')
+      .replace(/[•●▪·]/g, "-")
+      .replace(/…/g, "...")
+      .replace(/[→⇒]/g, "->")
+      .replace(/ /g, " ")
+      .replace(/[^\x09\x0A\x20-\x7E]/g, "");
+  }
+
   function downloadPdf(kind) {
     const isResume = kind === "resume";
-    const text = $(isResume ? "resumeTextOut" : "coverTextOut").value.trim();
-    if (!text) return setStatus("Nothing yet", "Generate the documents first.", "score-low");
+    const raw = $(isResume ? "resumeTextOut" : "coverTextOut").value.trim();
+    if (!raw) return setStatus("Nothing yet", "Generate the documents first.", "score-low");
+    const text = sanitize(raw);
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const margin = 56; // ~0.78in
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const maxW = pageW - margin * 2;
-    let y = margin;
 
     const company = ($("rCompany").value.trim() || "JobPulse").replace(/\s+/g, "_");
     const filename = `${company}_${isResume ? "Resume" : "Cover_Letter"}.pdf`;
 
-    const newPageIfNeeded = (lineH) => {
-      if (y + lineH > pageH - margin) {
-        doc.addPage();
-        y = margin;
-      }
-    };
+    // Base typography (Helvetica = Arial-like, ATS-standard). Auto-scaled to fit.
+    const SIZE = { name: 16, heading: 11.5, body: 10 };
+    const LH = { name: 19, heading: 15, body: 12.5 };
+    const GAP = { blank: 5, rule: 8, afterHeading: 2 };
+    const sizeKey = (t) => (t === "name" ? "name" : t === "heading" ? "heading" : "body");
 
-    const lines = text.split("\n");
-    lines.forEach((raw, idx) => {
-      const line = raw.replace(/\s+$/g, "");
+    // Classify each line once.
+    const items = text.split("\n").map((lineRaw, idx) => {
+      const line = lineRaw.replace(/\s+$/g, "");
+      const t = line.trim();
+      if (/^[-=_]{3,}$/.test(t)) return { type: "rule" };
+      if (!t) return { type: "blank" };
+      if (idx === 0) return { type: "name", text: line };
+      const isHeading = line === line.toUpperCase() && /[A-Z]/.test(line) && t.length < 40;
+      return { type: isHeading ? "heading" : "body", text: line };
+    });
 
-      // First non-empty line = name -> larger bold heading.
-      const isName = idx === 0 && line.trim();
-      // ALL-CAPS short lines = section headings.
-      const isHeading =
-        !isName && line.trim().length > 0 && line === line.toUpperCase() &&
-        /[A-Z]/.test(line) && line.trim().length < 40;
-      const isRule = /^[-=_]{3,}$/.test(line.trim());
-
-      if (isRule) {
-        doc.setDrawColor(150);
-        newPageIfNeeded(10);
-        doc.line(margin, y, pageW - margin, y);
-        y += 10;
-        return;
-      }
-
-      if (!line.trim()) { y += 7; return; } // blank line spacing
-
-      doc.setFont("times", isName || isHeading ? "bold" : "normal");
-      doc.setFontSize(isName ? 17 : isHeading ? 12 : 11);
-      const lineH = isName ? 22 : isHeading ? 16 : 15;
-
-      const wrapped = doc.splitTextToSize(line, maxW);
-      wrapped.forEach((w) => {
-        newPageIfNeeded(lineH);
-        doc.text(w, margin, y);
-        y += lineH;
+    // Total height at a given scale + margin (wraps text to width).
+    function measure(scale, margin) {
+      const maxW = pageW - margin * 2;
+      let h = margin * 2; // top + bottom
+      items.forEach((it) => {
+        if (it.type === "blank") { h += GAP.blank * scale; return; }
+        if (it.type === "rule") { h += GAP.rule * scale; return; }
+        const k = sizeKey(it.type);
+        doc.setFont("helvetica", it.type === "body" ? "normal" : "bold");
+        doc.setFontSize(SIZE[k] * scale);
+        h += doc.splitTextToSize(it.text, maxW).length * LH[k] * scale;
+        if (it.type === "heading") h += GAP.afterHeading * scale;
       });
-      if (isHeading) y += 2;
+      return h;
+    }
+
+    // Shrink margin then font scale until it fits on ONE page.
+    let margin = 46;
+    let scale = 1;
+    if (measure(scale, margin) > pageH) {
+      margin = 34;
+      while (measure(scale, margin) > pageH && scale > 0.7) scale -= 0.02;
+    }
+
+    // Render.
+    const maxW = pageW - margin * 2;
+    let y = margin + SIZE.name * scale;
+    items.forEach((it) => {
+      if (it.type === "blank") { y += GAP.blank * scale; return; }
+      if (it.type === "rule") { doc.setDrawColor(160); doc.line(margin, y - 6 * scale, pageW - margin, y - 6 * scale); y += GAP.rule * scale; return; }
+      const k = sizeKey(it.type);
+      doc.setFont("helvetica", it.type === "body" ? "normal" : "bold");
+      doc.setFontSize(SIZE[k] * scale);
+      doc.splitTextToSize(it.text, maxW).forEach((w) => {
+        doc.text(w, margin, y);
+        y += LH[k] * scale;
+      });
+      if (it.type === "heading") y += GAP.afterHeading * scale;
     });
 
     doc.save(filename);
