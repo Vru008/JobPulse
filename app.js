@@ -213,13 +213,17 @@ function computeMatch(job) {
 }
 
 // Fetch the live feed (Vercel first, Netlify fallback) and render.
-async function loadJobs() {
+async function loadJobs(force = false) {
   loadingJobs = true;
   renderJobs();
 
   const q = encodeURIComponent(state.profile.targetTitles || "");
   const sk = encodeURIComponent(state.profile.skills || "");
-  const endpoints = [`/api/jobs?q=${q}&skills=${sk}`, `/.netlify/functions/jobs?q=${q}&skills=${sk}`];
+  // Daily seed => a fresh rotation each morning (and a per-day cache key).
+  // "Refresh now" passes a timestamp seed to re-roll immediately, bypassing cache.
+  const seed = force ? `r${Date.now()}` : new Date().toISOString().slice(0, 10);
+  const qs = `q=${q}&skills=${sk}&seed=${encodeURIComponent(seed)}`;
+  const endpoints = [`/api/jobs?${qs}`, `/.netlify/functions/jobs?${qs}`];
   let data = null;
   for (const endpoint of endpoints) {
     try {
@@ -470,7 +474,7 @@ document.querySelector("#saveProfile").addEventListener("click", (event) => {
 document.querySelector("#refreshBtn").addEventListener("click", () => {
   state.hidden = {};
   save("hidden", state.hidden);
-  loadJobs();
+  loadJobs(true);
 });
 
 elements.loginForm.addEventListener("submit", async (event) => {
