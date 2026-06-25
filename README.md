@@ -67,6 +67,12 @@ free, no-key sources server-side:
   Reddit, …) with **direct apply links**
 - **Remotive**, **Arbeitnow**, **Remote OK**, **Jobicy**, **Himalayas** — broad
   remote software roles
+- **Hacker News "Who's Hiring"** (free, no key) — YC/startup roles, often visa-tagged
+- **JSearch / Google for Jobs** (optional) — postings from **LinkedIn, Indeed,
+  Glassdoor, ZipRecruiter** and company sites. Off unless a free RapidAPI key is
+  set as `JSEARCH_API_KEY`; without it the source is skipped, $0. LinkedIn/Indeed/
+  Glassdoor can't be fetched directly (they block bots + forbid scraping), so this
+  Google-for-Jobs aggregator is the legal way to include them.
 
 It excludes senior/lead, no-sponsorship/citizenship/clearance, intern/contract,
 stack-mismatch, and staffing-firm roles; scores a fit band; marks every role
