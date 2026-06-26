@@ -3,185 +3,345 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TradePulse India - Market Signals Dashboard</title>
-    <meta name="description" content="A dashboard concept for India's stock market with watchlists, market signals, risk controls, and buy/sell analysis." />
-    <meta name="theme-color" content="#111827" />
+    <title>JobPulse — Fresh roles &amp; ATS-ready resumes</title>
+    <meta name="description" content="Your private daily job cockpit: fresh role matches every morning plus ATS-ready resumes and cover letters." />
+    <meta name="theme-color" content="#203335" />
+
+    <!-- Favicons -->
+    <link rel="icon" href="assets/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+
+    <!-- Social share preview -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="JobPulse — Fresh roles &amp; ATS-ready resumes" />
+    <meta property="og:description" content="Fresh role matches every morning plus ATS-ready resumes and cover letters." />
+    <meta property="og:image" content="assets/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="JobPulse — Fresh roles &amp; ATS-ready resumes" />
+    <meta name="twitter:description" content="Fresh role matches every morning plus ATS-ready resumes and cover letters." />
+    <meta name="twitter:image" content="assets/og-image.png" />
+
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <section class="login-screen" aria-labelledby="loginTitle">
+      <form id="loginForm" class="login-panel">
+        <div class="brand login-brand">
+          <span class="brand-mark">JP</span>
+          <div>
+            <strong>JobPulse</strong>
+            <span>Private access</span>
+          </div>
+        </div>
+        <div>
+          <p class="eyebrow">Sign in</p>
+          <h1 id="loginTitle">Your daily job cockpit</h1>
+        </div>
+        <label>
+          Username
+          <input id="loginUser" autocomplete="username" required />
+        </label>
+        <label>
+          Passcode
+          <input id="loginPasscode" type="password" autocomplete="current-password" required />
+        </label>
+        <p id="loginError" class="login-error" role="alert"></p>
+        <button class="primary-btn" type="submit">Unlock JobPulse</button>
+      </form>
+    </section>
+
     <main class="app-shell">
       <aside class="sidebar">
         <div class="brand">
-          <span class="brand-mark">TP</span>
+          <span class="brand-mark">JP</span>
           <div>
-            <strong>TradePulse</strong>
-            <span>India market cockpit</span>
+            <strong>JobPulse</strong>
+            <span>Daily role cockpit</span>
           </div>
         </div>
 
-        <nav aria-label="Trading navigation">
-          <button class="nav-item active" type="button">Dashboard</button>
-          <button class="nav-item" type="button">Watchlist</button>
-          <button class="nav-item" type="button">Signals</button>
-          <button class="nav-item" type="button">Portfolio</button>
-          <button class="nav-item" type="button">Orders</button>
-          <button class="nav-item" type="button">Learning</button>
+        <nav aria-label="Primary navigation">
+          <button class="nav-item active" data-view="dashboard">Dashboard (USA)</button>
+          <button class="nav-item" data-view="global">Global Visa</button>
+          <button class="nav-item" data-view="resume">Resume &amp; Cover</button>
+          <button class="nav-item" data-view="profile">Profile</button>
+          <button class="nav-item" data-view="sources">Sources</button>
+          <button class="nav-item" data-view="tracker">Tracker</button>
         </nav>
 
-        <section class="risk-box">
-          <span>Risk mode</span>
-          <strong>Balanced</strong>
-          <p>Signals are educational analysis, not guaranteed profit or financial advice.</p>
+        <section class="sync-panel">
+          <span>Next refresh</span>
+          <strong>Tomorrow, 8:00 AM</strong>
+          <button id="refreshBtn" class="ghost-btn">Refresh now</button>
+          <button id="logoutBtn" class="ghost-btn">Log out</button>
         </section>
       </aside>
 
       <section class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">NSE + BSE dashboard concept</p>
-            <h1>India trading signals, watchlist, and risk view.</h1>
+            <p class="eyebrow">Fresh matches</p>
+            <h1>Jobs aligned with your profile</h1>
           </div>
           <div class="topbar-actions">
             <label class="search-box">
-              <span>Search symbol</span>
-              <input id="searchInput" type="search" placeholder="RELIANCE, TCS, HDFCBANK" />
+              <span>Search</span>
+              <input id="searchInput" type="search" placeholder="role, company, skill" />
             </label>
-            <button id="refreshBtn" class="primary-btn" type="button">Refresh Data</button>
+            <a id="multiSearchLink" class="primary-btn" href="#" target="_blank" rel="noreferrer">Search web</a>
           </div>
         </header>
 
-        <section class="market-strip" aria-label="Market indices">
-          <article>
-            <span>NIFTY 50</span>
-            <strong>24,812.30</strong>
-            <em class="up">+0.72%</em>
-          </article>
-          <article>
-            <span>SENSEX</span>
-            <strong>81,214.47</strong>
-            <em class="up">+0.64%</em>
-          </article>
-          <article>
-            <span>BANK NIFTY</span>
-            <strong>52,980.15</strong>
-            <em class="down">-0.18%</em>
-          </article>
-          <article>
-            <span>India VIX</span>
-            <strong>13.42</strong>
-            <em class="flat">Calm</em>
-          </article>
-        </section>
+        <section id="dashboard" class="view active">
+          <div class="metrics">
+            <article>
+              <span>New today</span>
+              <strong id="newToday">0</strong>
+            </article>
+            <article>
+              <span>Best match</span>
+              <strong id="bestMatch">0%</strong>
+            </article>
+            <article>
+              <span>Trusted sources</span>
+              <strong id="sourceCount">0</strong>
+            </article>
+            <article>
+              <span>Ready to apply</span>
+              <strong id="readyCount">0</strong>
+            </article>
+          </div>
 
-        <section class="dashboard-grid">
-          <section class="chart-panel" aria-labelledby="chartTitle">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Selected stock</p>
-                <h2 id="chartTitle">Reliance Industries</h2>
-              </div>
-              <div class="segmented" aria-label="Chart range">
-                <button class="active" type="button">1D</button>
-                <button type="button">1W</button>
-                <button type="button">1M</button>
-                <button type="button">1Y</button>
-              </div>
-            </div>
-            <canvas id="priceChart" width="900" height="360" aria-label="Price trend chart"></canvas>
-            <div class="chart-meta">
-              <span>Volume spike: 1.8x avg</span>
-              <span>RSI: 58</span>
-              <span>Support: ₹2,840</span>
-              <span>Resistance: ₹2,965</span>
-            </div>
-          </section>
-
-          <aside class="signal-panel" aria-labelledby="signalTitle">
-            <div class="panel-header compact">
-              <div>
-                <p class="eyebrow">Signal engine</p>
-                <h2 id="signalTitle">Top calls today</h2>
-              </div>
-            </div>
-            <div id="signalList" class="signal-list"></div>
-          </aside>
-        </section>
-
-        <section class="content-grid">
-          <section class="table-panel" aria-labelledby="watchlistTitle">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow">Live-style watchlist</p>
-                <h2 id="watchlistTitle">NSE favourites</h2>
-              </div>
-              <label class="select-label">
-                Sector
-                <select id="sectorFilter">
-                  <option value="all">All sectors</option>
-                  <option value="Energy">Energy</option>
-                  <option value="IT">IT</option>
-                  <option value="Banking">Banking</option>
-                  <option value="Auto">Auto</option>
-                  <option value="FMCG">FMCG</option>
-                </select>
-              </label>
-            </div>
-            <div class="stock-table" id="stockTable"></div>
-          </section>
-
-          <aside class="trade-ticket" aria-labelledby="ticketTitle">
-            <div>
-              <p class="eyebrow">Paper trade ticket</p>
-              <h2 id="ticketTitle">Plan before entry</h2>
-            </div>
+          <div class="controls">
             <label>
-              Symbol
-              <select id="ticketSymbol"></select>
+              Role
+              <select id="roleFilter">
+                <option value="all">All roles</option>
+              </select>
             </label>
-            <div class="ticket-row">
-              <label>
-                Quantity
-                <input id="quantityInput" type="number" min="1" value="10" />
-              </label>
-              <label>
-                Max loss
-                <input id="lossInput" type="number" min="100" value="1500" />
-              </label>
-            </div>
-            <div class="action-toggle">
-              <button class="buy active" type="button">Buy</button>
-              <button class="sell" type="button">Sell</button>
-            </div>
-            <div class="ticket-summary">
-              <span>Estimated capital</span>
-              <strong id="capitalValue">₹0</strong>
-              <span>Suggested stop loss</span>
-              <strong id="stopValue">₹0</strong>
-            </div>
-            <button class="primary-btn wide" type="button">Add Paper Trade</button>
-          </aside>
+            <label>
+              Work mode
+              <select id="modeFilter">
+                <option value="all">Any</option>
+                <option value="Remote">Remote</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="Onsite">Onsite</option>
+              </select>
+            </label>
+            <label>
+              Minimum match
+              <input id="matchFilter" type="range" min="50" max="95" value="55" />
+              <span id="matchLabel">55%</span>
+            </label>
+          </div>
+
+          <div id="jobList" class="job-list" aria-live="polite"></div>
         </section>
 
-        <section class="insight-band">
-          <article>
-            <span>Market breadth</span>
-            <strong>31 advances / 19 declines</strong>
-            <p>Momentum is positive, but avoid chasing stocks near resistance.</p>
-          </article>
-          <article>
-            <span>FII/DII flow</span>
-            <strong>Mixed institutional activity</strong>
-            <p>Use smaller position size until daily trend confirms.</p>
-          </article>
-          <article>
-            <span>Risk reminder</span>
-            <strong>No guaranteed profit</strong>
-            <p>Every signal needs your own research, stop loss, and capital discipline.</p>
-          </article>
+        <section id="global" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Outside the USA · visa sponsorship</p>
+              <h2>Work-visa roles for immigrants worldwide</h2>
+            </div>
+            <button id="refreshGlobalBtn" class="primary-btn" type="button">Refresh</button>
+          </div>
+          <p class="resume-note">
+            Frontend / full-stack roles in countries with skilled-worker visa
+            pathways — Germany (EU Blue Card), Canada (Express Entry), Netherlands
+            (Highly Skilled Migrant), UK (Skilled Worker), Ireland, Australia, and
+            more. Always VERIFY sponsorship directly with the employer.
+          </p>
+          <div id="globalList" class="job-list" aria-live="polite"></div>
+        </section>
+
+        <section id="profile" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Your matching profile</p>
+              <h2>Tell JobPulse what to hunt for</h2>
+            </div>
+            <button id="saveProfile" class="primary-btn">Save profile</button>
+          </div>
+
+          <form class="profile-grid">
+            <label>
+              Target titles
+              <textarea id="targetTitles" rows="4">Frontend Developer, React Developer, Full Stack Developer, Software Engineer, UI/UX Engineer</textarea>
+            </label>
+            <label>
+              Skills
+              <textarea id="skills" rows="4">React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs, MongoDB, Express</textarea>
+            </label>
+            <label>
+              Preferred location
+              <input id="location" value="United States, Remote" />
+            </label>
+            <label>
+              Experience level
+              <select id="experience">
+                <option>Entry level</option>
+                <option selected>Junior to mid level</option>
+                <option>Senior level</option>
+              </select>
+            </label>
+            <label>
+              Salary target
+              <input id="salary" value="$80k+" />
+            </label>
+            <label>
+              Work authorization
+              <select id="sponsorship">
+                <option selected>On F-1 OPT (authorized now), needs future H-1B sponsorship</option>
+                <option>Needs sponsorship now</option>
+                <option>No sponsorship needed</option>
+              </select>
+            </label>
+            <label>
+              Portfolio / live project link (shown on every résumé + cover letter)
+              <input id="portfolio" value="https://job-mate-nu.vercel.app" />
+            </label>
+            <label>
+              Currently learning (honest — unlocks more roles)
+              <input id="learning" value="TypeScript, Next.js" />
+            </label>
+          </form>
+        </section>
+
+        <section id="sources" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Trusted sources</p>
+              <h2>Choose where daily roles come from</h2>
+            </div>
+          </div>
+          <div id="sourceGrid" class="source-grid"></div>
+        </section>
+
+        <section id="tracker" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Applications</p>
+              <h2>Saved and applied jobs</h2>
+            </div>
+            <button id="exportExcel" class="primary-btn" type="button">Export Excel tracker</button>
+          </div>
+          <div id="trackerList" class="tracker-list"></div>
+        </section>
+
+        <section id="resume" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">AI resume &amp; cover letter</p>
+              <h2>Tailored to the company, ready to upload</h2>
+            </div>
+            <button id="generateDocs" class="primary-btn" type="button">Generate documents</button>
+          </div>
+
+          <p class="resume-note">
+            Give your current résumé, the company name, and the job description. AI
+            rewrites both into an ATS-strong résumé and a matching cover letter, then
+            exports clean PDFs you can upload straight into an application.
+          </p>
+
+          <div class="resume-layout">
+            <form class="resume-form" id="resumeForm">
+              <div class="resume-fieldset">
+                <span class="resume-legend">1 · Your current résumé</span>
+                <label class="file-drop" for="rFile">
+                  <input id="rFile" type="file" accept=".pdf,.doc,.docx,.txt" hidden />
+                  <span class="file-drop-cta">Upload PDF or Word</span>
+                  <span class="file-drop-name" id="rFileName">No file chosen — or paste below</span>
+                </label>
+                <label>…or paste your résumé text
+                  <textarea id="rResumeText" rows="7" placeholder="Paste your existing résumé here if you prefer not to upload."></textarea>
+                </label>
+              </div>
+
+              <div class="resume-fieldset">
+                <span class="resume-legend">2 · The role</span>
+                <label class="search-box">Company name
+                  <input id="rCompany" type="search" placeholder="e.g. Northstar Health" />
+                </label>
+                <label>Job description
+                  <textarea id="rJobDesc" rows="7" placeholder="Paste the full job posting. The résumé is tailored to match its requirements and keywords."></textarea>
+                </label>
+              </div>
+            </form>
+
+            <div class="resume-output">
+              <div class="ats-score" id="atsStatus">
+                <span>Status</span>
+                <strong id="atsScoreValue">Ready</strong>
+                <p id="atsScoreHint">Add your résumé, a company, and the job description, then Generate.</p>
+              </div>
+
+              <div class="doc-card">
+                <header>
+                  <h3>Résumé</h3>
+                  <div class="doc-actions">
+                    <button type="button" class="ghost-btn" data-copy="resumeTextOut">Copy</button>
+                    <button type="button" class="ghost-btn" data-pdf="resume">Download PDF</button>
+                  </div>
+                </header>
+                <textarea id="resumeTextOut" class="doc-text" rows="18" spellcheck="false" placeholder="Your tailored résumé appears here. You can edit before downloading."></textarea>
+              </div>
+
+              <div class="doc-card">
+                <header>
+                  <h3>Cover letter</h3>
+                  <div class="doc-actions">
+                    <button type="button" class="ghost-btn" data-copy="coverTextOut">Copy</button>
+                    <button type="button" class="ghost-btn" data-pdf="cover">Download PDF</button>
+                  </div>
+                </header>
+                <textarea id="coverTextOut" class="doc-text" rows="14" spellcheck="false" placeholder="Your tailored cover letter appears here. You can edit before downloading."></textarea>
+              </div>
+            </div>
+          </div>
         </section>
       </section>
     </main>
 
+    <template id="jobCardTemplate">
+      <article class="job-card">
+        <div class="job-main">
+          <div>
+            <div class="job-title-row">
+              <h3></h3>
+              <span class="badge"></span>
+              <span class="fit-band"></span>
+            </div>
+            <p class="company"></p>
+            <p class="meta"></p>
+          </div>
+          <div class="score"></div>
+        </div>
+        <p class="summary"></p>
+        <p class="sponsor"></p>
+        <div class="skill-row"></div>
+        <div class="job-actions">
+          <a class="apply-link" target="_blank" rel="noreferrer">Apply</a>
+          <button class="tailor-btn">Tailor résumé</button>
+          <button class="save-btn">Save</button>
+          <button class="applied-btn">Applied</button>
+          <button class="hide-btn">Hide</button>
+        </div>
+      </article>
+    </template>
+
+    <!-- Résumé tooling: PDF/Word text extraction + PDF export (all client-side) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Excel tracker export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <script src="app.js"></script>
+    <script src="resume.js"></script>
   </body>
 </html>
