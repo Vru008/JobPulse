@@ -9,8 +9,9 @@ module.exports = async function handler(req, res) {
     const skills = (req.query && req.query.skills) || "";
     const seed = (req.query && req.query.seed) || "";
     const scope = (req.query && req.query.scope) === "global" ? "global" : "us";
+    const only = (req.query && req.query.only) || "";
     const limit = Math.min(parseInt((req.query && req.query.limit) || "25", 10) || 25, 50);
-    const data = await fetchJobs({ q, skills, seed, scope, limit });
+    const data = await fetchJobs({ q, skills, seed, scope, only, limit });
     // Edge-cache ~30 min so the feed stays fresh without hammering the sources.
     res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate=3600");
     res.status(200).json(data);

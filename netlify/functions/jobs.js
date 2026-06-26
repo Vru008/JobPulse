@@ -8,8 +8,9 @@ exports.handler = async (event) => {
     const skills = params.skills || "";
     const seed = params.seed || "";
     const scope = params.scope === "global" ? "global" : "us";
+    const only = params.only || "";
     const limit = Math.min(parseInt(params.limit || "25", 10) || 25, 50);
-    const data = await fetchJobs({ q, skills, seed, scope, limit });
+    const data = await fetchJobs({ q, skills, seed, scope, only, limit });
     return {
       statusCode: 200,
       headers: {
