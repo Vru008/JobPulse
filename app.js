@@ -709,6 +709,22 @@ function watcherCard(match) {
     apply.textContent = "Apply on Indeed";
     actions.appendChild(apply);
   }
+
+  // Pipe this role into the AI Resume & Cover tab — same hook the dashboard cards use.
+  const tailor = document.createElement("button");
+  tailor.className = "tailor-btn";
+  tailor.type = "button";
+  tailor.textContent = "Tailor résumé";
+  tailor.addEventListener("click", () => {
+    sessionStorage.setItem("jobpulse-tailor", JSON.stringify({
+      company: match.company,
+      title: match.role,
+      jobDesc: `${match.role} at ${match.company}\nLocation: ${match.location || ""}\n${match.fit || ""}\n\nApply: ${match.url || ""}`,
+    }));
+    document.querySelector('.nav-item[data-view="resume"]').click();
+  });
+  actions.appendChild(tailor);
+
   if (match.note) {
     const copy = document.createElement("button");
     copy.className = "ghost-btn";
@@ -725,8 +741,10 @@ function watcherCard(match) {
   return card;
 }
 
-let watcherMatches = [];
+let watcherCurrent = [];
+let watcherArchive = [];
 let watcherMeta = { loaded: false, lastSweep: null };
+let watcherShowArchive = false;
 
 function watchRoleCategory(title) {
   const t = (title || "").toLowerCase();
@@ -738,24 +756,11 @@ function watchRoleCategory(title) {
   return "other";
 }
 
-// Filter the stored matches by the Watcher tab controls and repaint the list.
-function paintWatcher() {
-  const list = document.querySelector("#watcherList");
-  const status = document.querySelector("#watcherStatus");
-  list.innerHTML = "";
-
-  if (!watcherMatches.length) {
-    status.textContent = watcherMeta.loaded
-      ? "No matches stored yet. They appear after your laptop runs a scheduled sweep (8 AM / 1 PM / 6 PM ET)."
-      : "Watcher store not reachable yet — once the new endpoint is deployed, matches show here.";
-    return;
-  }
-
+function watchFilter(matches) {
   const q = (document.querySelector("#watchSearch")?.value || "").trim().toLowerCase();
   const role = document.querySelector("#watchRole")?.value || "all";
   const mode = document.querySelector("#watchMode")?.value || "all";
-
-  const filtered = watcherMatches.filter((m) => {
+  return matches.filter((m) => {
     if (q && !`${m.role} ${m.company} ${m.location}`.toLowerCase().includes(q)) return false;
     if (role !== "all" && watchRoleCategory(m.role) !== role) return false;
     if (mode !== "all") {
@@ -765,15 +770,54 @@ function paintWatcher() {
     }
     return true;
   });
+}
 
+// Repaint the Watcher list — either fresh (current) or archive, based on the toggle.
+function paintWatcher() {
+  const list = document.querySelector("#watcherList");
+  const status = document.querySelector("#watcherStatus");
+  const heading = document.querySelector("#watcherHeading");
+  const archBtn = document.querySelector("#archiveWatcherBtn");
+  list.innerHTML = "";
+
+  if (archBtn) {
+    archBtn.textContent = watcherShowArchive
+      ? `Back to fresh (${watcherCurrent.length})`
+      : `Archive (${watcherArchive.length})`;
+    archBtn.setAttribute("aria-pressed", watcherShowArchive ? "true" : "false");
+  }
+  if (heading) {
+    heading.textContent = watcherShowArchive
+      ? "Archive · all previously surfaced roles"
+      : "Fresh roles from the latest sweep";
+  }
+
+  const source = watcherShowArchive ? watcherArchive : watcherCurrent;
+
+  if (!source.length) {
+    if (!watcherMeta.loaded) {
+      status.textContent = "Watcher store not reachable yet.";
+    } else if (watcherShowArchive) {
+      status.textContent = "Archive is empty — older sweeps will collect here as new ones arrive.";
+    } else {
+      status.textContent = "No fresh matches yet. They appear after the next scheduled sweep (8 AM / 1 PM / 6 PM ET).";
+    }
+    return;
+  }
+
+  const filtered = watchFilter(source);
   const swept = watcherMeta.lastSweep ? ` · last sweep ${timeAgo(watcherMeta.lastSweep)}` : "";
-  status.textContent = `Showing ${filtered.length} of ${watcherMatches.length} match${watcherMatches.length === 1 ? "" : "es"}${swept}.`;
+  const label = watcherShowArchive ? "archived role" : "fresh match";
+  status.textContent = `Showing ${filtered.length} of ${source.length} ${label}${source.length === 1 ? "" : "s"}${swept}.`;
   filtered.forEach((m) => list.appendChild(watcherCard(m)));
 }
 
 function renderWatcher(data) {
-  watcherMatches = (data && data.matches) || [];
+  watcherCurrent = (data && data.current) || [];
+  watcherArchive = (data && data.archive) || [];
   watcherMeta = { loaded: !!data, lastSweep: data && data.lastSweep };
+  // Default to the fresh view on every load.
+  watcherShowArchive = false;
   paintWatcher();
 }
 
@@ -798,6 +842,14 @@ async function loadWatcher(force) {
 const refreshWatcherBtn = document.querySelector("#refreshWatcherBtn");
 if (refreshWatcherBtn) {
   refreshWatcherBtn.addEventListener("click", () => loadWatcher(true));
+}
+
+const archiveWatcherBtn = document.querySelector("#archiveWatcherBtn");
+if (archiveWatcherBtn) {
+  archiveWatcherBtn.addEventListener("click", () => {
+    watcherShowArchive = !watcherShowArchive;
+    paintWatcher();
+  });
 }
 
 ["input", "change"].forEach((eventName) => {
