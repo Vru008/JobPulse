@@ -164,9 +164,12 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Indeed job-watcher · 3&times;/day</p>
-              <h2>Fresh roles found by your agent</h2>
+              <h2 id="watcherHeading">Fresh roles found by your agent</h2>
             </div>
-            <button id="refreshWatcherBtn" class="primary-btn" type="button">Refresh</button>
+            <div class="topbar-actions">
+              <button id="refreshWatcherBtn" class="primary-btn" type="button">Refresh</button>
+              <button id="archiveWatcherBtn" class="ghost-btn" type="button" aria-pressed="false">Archive (0)</button>
+            </div>
           </div>
           <p class="resume-note">
             Roles surfaced by your scheduled Indeed watcher (8 AM / 1 PM / 6 PM ET),
