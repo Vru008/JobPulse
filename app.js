@@ -551,6 +551,7 @@ elements.navItems.forEach((item) => {
     document.querySelector(`#${item.dataset.view}`).classList.add("active");
     // Lazy-load the global feed the first time its tab is opened.
     if (item.dataset.view === "global" && !globalLoaded) loadGlobalJobs();
+    if (item.dataset.view === "watcher" && !watcherLoaded) loadWatcher();
   });
 });
 
@@ -621,3 +622,187 @@ if (isAuthenticated()) {
 } else {
   lockApp();
 }
+
+/* ---------- Indeed Watcher tab (results from the scheduled agent via /api/jobwatch) ---------- */
+
+const WATCH_ENDPOINTS = ["/api/jobwatch", "/.netlify/functions/jobwatch"];
+let watcherLoaded = false;
+
+function timeAgo(iso) {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const mins = Math.round((Date.now() - then) / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs === 1 ? "" : "s"} ago`;
+  const days = Math.round(hrs / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function watcherCard(match) {
+  const card = document.createElement("article");
+  card.className = "job-card";
+
+  const main = document.createElement("div");
+  main.className = "job-main";
+  const left = document.createElement("div");
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "job-title-row";
+  const h3 = document.createElement("h3");
+  if (match.url) {
+    const a = document.createElement("a");
+    a.href = match.url;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    a.textContent = match.role || "Role";
+    h3.appendChild(a);
+  } else {
+    h3.textContent = match.role || "Role";
+  }
+  titleRow.appendChild(h3);
+  if (match.fit) {
+    const band = document.createElement("span");
+    band.className = "fit-band";
+    band.textContent = match.fit;
+    titleRow.appendChild(band);
+  }
+  left.appendChild(titleRow);
+
+  const company = document.createElement("p");
+  company.className = "company";
+  company.textContent = match.company || "";
+  left.appendChild(company);
+
+  const meta = document.createElement("p");
+  meta.className = "meta";
+  meta.textContent = [match.location, match.postedOn ? `posted ${match.postedOn}` : "", timeAgo(match.firstSeen)]
+    .filter(Boolean)
+    .join(" · ");
+  left.appendChild(meta);
+
+  main.appendChild(left);
+  card.appendChild(main);
+
+  if (match.note) {
+    const details = document.createElement("details");
+    details.className = "watch-note";
+    const summary = document.createElement("summary");
+    summary.textContent = "Draft application note";
+    const p = document.createElement("p");
+    p.textContent = match.note;
+    details.appendChild(summary);
+    details.appendChild(p);
+    card.appendChild(details);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "job-actions";
+  if (match.url) {
+    const apply = document.createElement("a");
+    apply.className = "apply-link";
+    apply.href = match.url;
+    apply.target = "_blank";
+    apply.rel = "noreferrer";
+    apply.textContent = "Apply on Indeed";
+    actions.appendChild(apply);
+  }
+  if (match.note) {
+    const copy = document.createElement("button");
+    copy.className = "ghost-btn";
+    copy.type = "button";
+    copy.textContent = "Copy note";
+    copy.addEventListener("click", () => {
+      navigator.clipboard?.writeText(match.note);
+      copy.textContent = "Copied ✓";
+      setTimeout(() => (copy.textContent = "Copy note"), 1500);
+    });
+    actions.appendChild(copy);
+  }
+  card.appendChild(actions);
+  return card;
+}
+
+let watcherMatches = [];
+let watcherMeta = { loaded: false, lastSweep: null };
+
+function watchRoleCategory(title) {
+  const t = (title || "").toLowerCase();
+  if (/(full[ -]?stack)/.test(t)) return "fullstack";
+  if (/(\bui\b|\bux\b|user interface|user experience)/.test(t)) return "ui";
+  if (t.includes("react")) return "react";
+  if (t.includes("front")) return "frontend";
+  if (t.includes("web")) return "web";
+  return "other";
+}
+
+// Filter the stored matches by the Watcher tab controls and repaint the list.
+function paintWatcher() {
+  const list = document.querySelector("#watcherList");
+  const status = document.querySelector("#watcherStatus");
+  list.innerHTML = "";
+
+  if (!watcherMatches.length) {
+    status.textContent = watcherMeta.loaded
+      ? "No matches stored yet. They appear after your laptop runs a scheduled sweep (8 AM / 1 PM / 6 PM ET)."
+      : "Watcher store not reachable yet — once the new endpoint is deployed, matches show here.";
+    return;
+  }
+
+  const q = (document.querySelector("#watchSearch")?.value || "").trim().toLowerCase();
+  const role = document.querySelector("#watchRole")?.value || "all";
+  const mode = document.querySelector("#watchMode")?.value || "all";
+
+  const filtered = watcherMatches.filter((m) => {
+    if (q && !`${m.role} ${m.company} ${m.location}`.toLowerCase().includes(q)) return false;
+    if (role !== "all" && watchRoleCategory(m.role) !== role) return false;
+    if (mode !== "all") {
+      const remote = /remote/i.test(m.location || "");
+      if (mode === "remote" && !remote) return false;
+      if (mode === "onsite" && remote) return false;
+    }
+    return true;
+  });
+
+  const swept = watcherMeta.lastSweep ? ` · last sweep ${timeAgo(watcherMeta.lastSweep)}` : "";
+  status.textContent = `Showing ${filtered.length} of ${watcherMatches.length} match${watcherMatches.length === 1 ? "" : "es"}${swept}.`;
+  filtered.forEach((m) => list.appendChild(watcherCard(m)));
+}
+
+function renderWatcher(data) {
+  watcherMatches = (data && data.matches) || [];
+  watcherMeta = { loaded: !!data, lastSweep: data && data.lastSweep };
+  paintWatcher();
+}
+
+async function loadWatcher(force) {
+  if (watcherLoaded && !force) return;
+  const status = document.querySelector("#watcherStatus");
+  status.textContent = "Loading latest matches…";
+  const token = syncToken();
+  for (const endpoint of WATCH_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, { headers: { "x-jobpulse-pass": token } });
+      if (!res.ok) continue;
+      const { data } = await res.json();
+      watcherLoaded = true;
+      renderWatcher(data);
+      return;
+    } catch (_) { /* try next endpoint */ }
+  }
+  renderWatcher(null);
+}
+
+const refreshWatcherBtn = document.querySelector("#refreshWatcherBtn");
+if (refreshWatcherBtn) {
+  refreshWatcherBtn.addEventListener("click", () => loadWatcher(true));
+}
+
+["input", "change"].forEach((eventName) => {
+  ["#watchSearch", "#watchRole", "#watchMode"].forEach((selector) => {
+    const field = document.querySelector(selector);
+    if (field) field.addEventListener(eventName, paintWatcher);
+  });
+});

@@ -742,3 +742,27 @@ textarea {
     font-size: 2.25rem;
   }
 }
+
+/* Indeed Watcher — draft-note disclosure on result cards */
+.watch-note {
+  margin: 0.6rem 0 0.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.55rem 0.85rem;
+}
+.watch-note summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  list-style: none;
+}
+.watch-note summary::-webkit-details-marker { display: none; }
+.watch-note summary::before { content: "📝 "; }
+.watch-note[open] summary { margin-bottom: 0.5rem; }
+.watch-note p {
+  margin: 0;
+  line-height: 1.55;
+  font-size: 0.92rem;
+  opacity: 0.92;
+}

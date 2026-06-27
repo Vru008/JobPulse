@@ -66,6 +66,7 @@
 
         <nav aria-label="Primary navigation">
           <button class="nav-item active" data-view="dashboard">Dashboard (USA)</button>
+          <button class="nav-item" data-view="watcher">Indeed Watcher</button>
           <button class="nav-item" data-view="global">Global Visa</button>
           <button class="nav-item" data-view="resume">Resume &amp; Cover</button>
           <button class="nav-item" data-view="profile">Profile</button>
@@ -157,6 +158,51 @@
             more. Always VERIFY sponsorship directly with the employer.
           </p>
           <div id="globalList" class="job-list" aria-live="polite"></div>
+        </section>
+
+        <section id="watcher" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Indeed job-watcher · 3&times;/day</p>
+              <h2>Fresh roles found by your agent</h2>
+            </div>
+            <button id="refreshWatcherBtn" class="primary-btn" type="button">Refresh</button>
+          </div>
+          <p class="resume-note">
+            Roles surfaced by your scheduled Indeed watcher (8 AM / 1 PM / 6 PM ET),
+            filtered to junior/mid frontend, full-stack, UI, React and web roles across
+            the US. Each card has the apply link and a ready-to-send draft note. Updates
+            after each sweep your laptop runs — open this from your phone anytime.
+          </p>
+          <p id="watcherStatus" class="resume-note" aria-live="polite">Loading latest matches&hellip;</p>
+
+          <div class="controls">
+            <label>
+              Search
+              <input id="watchSearch" type="search" placeholder="role, company, location" />
+            </label>
+            <label>
+              Role
+              <select id="watchRole">
+                <option value="all">All roles</option>
+                <option value="frontend">Frontend</option>
+                <option value="fullstack">Full Stack</option>
+                <option value="react">React</option>
+                <option value="ui">UI / UX</option>
+                <option value="web">Web</option>
+              </select>
+            </label>
+            <label>
+              Work mode
+              <select id="watchMode">
+                <option value="all">Any</option>
+                <option value="remote">Remote</option>
+                <option value="onsite">On-site</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="watcherList" class="job-list" aria-live="polite"></div>
         </section>
 
         <section id="profile" class="view">
