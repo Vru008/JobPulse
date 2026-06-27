@@ -725,20 +725,56 @@ function watcherCard(match) {
   return card;
 }
 
-function renderWatcher(data) {
+let watcherMatches = [];
+let watcherMeta = { loaded: false, lastSweep: null };
+
+function watchRoleCategory(title) {
+  const t = (title || "").toLowerCase();
+  if (/(full[ -]?stack)/.test(t)) return "fullstack";
+  if (/(\bui\b|\bux\b|user interface|user experience)/.test(t)) return "ui";
+  if (t.includes("react")) return "react";
+  if (t.includes("front")) return "frontend";
+  if (t.includes("web")) return "web";
+  return "other";
+}
+
+// Filter the stored matches by the Watcher tab controls and repaint the list.
+function paintWatcher() {
   const list = document.querySelector("#watcherList");
   const status = document.querySelector("#watcherStatus");
   list.innerHTML = "";
-  const matches = (data && data.matches) || [];
-  if (!matches.length) {
-    status.textContent = data
+
+  if (!watcherMatches.length) {
+    status.textContent = watcherMeta.loaded
       ? "No matches stored yet. They appear after your laptop runs a scheduled sweep (8 AM / 1 PM / 6 PM ET)."
       : "Watcher store not reachable yet — once the new endpoint is deployed, matches show here.";
     return;
   }
-  const swept = data.lastSweep ? ` · last sweep ${timeAgo(data.lastSweep)}` : "";
-  status.textContent = `${matches.length} match${matches.length === 1 ? "" : "es"} saved${swept}.`;
-  matches.forEach((m) => list.appendChild(watcherCard(m)));
+
+  const q = (document.querySelector("#watchSearch")?.value || "").trim().toLowerCase();
+  const role = document.querySelector("#watchRole")?.value || "all";
+  const mode = document.querySelector("#watchMode")?.value || "all";
+
+  const filtered = watcherMatches.filter((m) => {
+    if (q && !`${m.role} ${m.company} ${m.location}`.toLowerCase().includes(q)) return false;
+    if (role !== "all" && watchRoleCategory(m.role) !== role) return false;
+    if (mode !== "all") {
+      const remote = /remote/i.test(m.location || "");
+      if (mode === "remote" && !remote) return false;
+      if (mode === "onsite" && remote) return false;
+    }
+    return true;
+  });
+
+  const swept = watcherMeta.lastSweep ? ` · last sweep ${timeAgo(watcherMeta.lastSweep)}` : "";
+  status.textContent = `Showing ${filtered.length} of ${watcherMatches.length} match${watcherMatches.length === 1 ? "" : "es"}${swept}.`;
+  filtered.forEach((m) => list.appendChild(watcherCard(m)));
+}
+
+function renderWatcher(data) {
+  watcherMatches = (data && data.matches) || [];
+  watcherMeta = { loaded: !!data, lastSweep: data && data.lastSweep };
+  paintWatcher();
 }
 
 async function loadWatcher(force) {
@@ -763,3 +799,10 @@ const refreshWatcherBtn = document.querySelector("#refreshWatcherBtn");
 if (refreshWatcherBtn) {
   refreshWatcherBtn.addEventListener("click", () => loadWatcher(true));
 }
+
+["input", "change"].forEach((eventName) => {
+  ["#watchSearch", "#watchRole", "#watchMode"].forEach((selector) => {
+    const field = document.querySelector(selector);
+    if (field) field.addEventListener(eventName, paintWatcher);
+  });
+});
