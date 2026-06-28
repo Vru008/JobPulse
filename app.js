@@ -543,17 +543,51 @@ function renderAll() {
   renderTracker();
 }
 
+// Switch which view is active. Optionally push a history entry so the browser
+// back button steps through tabs instead of leaving the app entirely.
+function setActiveView(viewName, options) {
+  const item = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+  const view = document.querySelector(`#${viewName}`);
+  if (!item || !view) return;
+  elements.navItems.forEach((nav) => nav.classList.remove("active"));
+  elements.views.forEach((v) => v.classList.remove("active"));
+  item.classList.add("active");
+  view.classList.add("active");
+  if (viewName === "global" && !globalLoaded) loadGlobalJobs();
+  if (viewName === "watcher" && !watcherLoaded) loadWatcher();
+  if (options && options.pushHistory) {
+    try { history.pushState({ jpView: viewName }, "", `#${viewName}`); } catch (_) {}
+  } else if (options && options.replaceHistory) {
+    try { history.replaceState({ jpView: viewName }, "", `#${viewName}`); } catch (_) {}
+  }
+}
+
 elements.navItems.forEach((item) => {
   item.addEventListener("click", () => {
-    elements.navItems.forEach((nav) => nav.classList.remove("active"));
-    elements.views.forEach((view) => view.classList.remove("active"));
-    item.classList.add("active");
-    document.querySelector(`#${item.dataset.view}`).classList.add("active");
-    // Lazy-load the global feed the first time its tab is opened.
-    if (item.dataset.view === "global" && !globalLoaded) loadGlobalJobs();
-    if (item.dataset.view === "watcher" && !watcherLoaded) loadWatcher();
+    setActiveView(item.dataset.view, { pushHistory: true });
   });
 });
+
+// Browser back/forward: pop history entries and switch views inside the app
+// rather than navigating away. The first popstate after a fresh load may have
+// state === null (the initial entry we replaced on boot) — handle that too.
+window.addEventListener("popstate", (event) => {
+  const view = (event.state && event.state.jpView) ||
+               (location.hash || "").replace(/^#/, "") ||
+               "dashboard";
+  if (document.querySelector(`.nav-item[data-view="${view}"]`)) {
+    setActiveView(view, {}); // no history mutation — we are responding to it
+  }
+});
+
+// On load (and after login), honor a hash like /#watcher so deep links work and
+// seed the very first history entry with a known view so back behaves cleanly.
+function initialiseViewFromHash() {
+  const want = (location.hash || "").replace(/^#/, "") || "dashboard";
+  const target = document.querySelector(`.nav-item[data-view="${want}"]`) ? want : "dashboard";
+  setActiveView(target, { replaceHistory: true });
+}
+initialiseViewFromHash();
 
 ["input", "change"].forEach((eventName) => {
   [elements.roleFilter, elements.modeFilter, elements.matchFilter, elements.searchInput].forEach((input) => {
