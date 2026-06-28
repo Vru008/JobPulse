@@ -226,12 +226,34 @@
       setStatus("Done", hint, notes.length ? "score-mid" : "score-good");
     } catch (err) {
       console.error("AI generation failed:", err);
-      setStatus(
-        "Offline",
-        "AI endpoint unreachable. Deploy to Netlify with a GEMINI_API_KEY env var " +
-          "(or run `netlify dev`) to enable generation.",
-        "score-low"
-      );
+      const detail = String(err && err.message ? err.message : err);
+      // Quota exhaustion is the most common "failure" — Gemini free tier resets
+      // around midnight Pacific. Surface that honestly instead of saying offline.
+      if (/429|quota|rate[- ]?limit/i.test(detail)) {
+        setStatus(
+          "Daily AI limit reached",
+          "Your Gemini free-tier quota for today is used up. It resets around midnight US-Pacific. You can still copy/paste an answer manually until then.",
+          "score-low"
+        );
+      } else if (/404|not.?found/i.test(detail)) {
+        setStatus(
+          "Endpoint missing",
+          "The /api/tailor endpoint isn't on this deployment. Check Vercel deployment logs.",
+          "score-low"
+        );
+      } else if (/GEMINI_API_KEY/i.test(detail)) {
+        setStatus(
+          "Missing API key",
+          "GEMINI_API_KEY isn't set on the server. Add it in Vercel → Settings → Environment Variables, then redeploy.",
+          "score-low"
+        );
+      } else {
+        setStatus(
+          "AI error",
+          `Generation failed: ${detail.slice(0, 200)}`,
+          "score-low"
+        );
+      }
     } finally {
       btn.disabled = false;
       btn.textContent = "Generate documents";
