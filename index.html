@@ -67,6 +67,7 @@
         <nav aria-label="Primary navigation">
           <button class="nav-item active" data-view="dashboard">Dashboard (USA)</button>
           <button class="nav-item" data-view="watcher">Indeed Watcher</button>
+          <button class="nav-item" data-view="ask">Ask Assistant</button>
           <button class="nav-item" data-view="global">Global Visa</button>
           <button class="nav-item" data-view="resume">Resume &amp; Cover</button>
           <button class="nav-item" data-view="profile">Profile</button>
@@ -280,6 +281,31 @@
             <button id="exportExcel" class="primary-btn" type="button">Export Excel tracker</button>
           </div>
           <div id="trackerList" class="tracker-list"></div>
+        </section>
+
+        <section id="ask" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Application Q&amp;A · grounded strictly in your profile</p>
+              <h2>Ask the assistant anything about your job search</h2>
+            </div>
+            <button id="clearChatBtn" class="ghost-btn" type="button">Clear chat</button>
+          </div>
+          <p class="resume-note">
+            Ask things like &ldquo;What should I emphasize when applying to Reddit?&rdquo;,
+            &ldquo;Does my React experience map to a UI role at Figma?&rdquo;, &ldquo;Draft a 2-line
+            intro for a Stripe coffee chat&rdquo;, or &ldquo;Should I apply to this senior role?&rdquo;
+            Answers are strictly grounded in your résumé + profile — the assistant
+            will not invent experience you don&rsquo;t have. Tip: add your résumé in
+            <strong>Resume &amp; Cover</strong> first so it has the full picture.
+          </p>
+
+          <div id="chatHistory" class="chat-history" aria-live="polite"></div>
+
+          <form id="chatForm" class="chat-form" autocomplete="off">
+            <textarea id="chatInput" rows="3" placeholder="Ask anything about your job search…" required></textarea>
+            <button class="primary-btn" type="submit" id="chatSendBtn">Ask</button>
+          </form>
         </section>
 
         <section id="resume" class="view">
