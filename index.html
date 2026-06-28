@@ -75,8 +75,8 @@
         </nav>
 
         <section class="sync-panel">
-          <span>Next refresh</span>
-          <strong>Tomorrow, 8:00 AM</strong>
+          <span>Next watcher run</span>
+          <strong id="nextSweepTime">—</strong>
           <button id="refreshBtn" class="ghost-btn">Refresh now</button>
           <button id="logoutBtn" class="ghost-btn">Log out</button>
         </section>
@@ -288,7 +288,10 @@
               <p class="eyebrow">AI resume &amp; cover letter</p>
               <h2>Tailored to the company, ready to upload</h2>
             </div>
-            <button id="generateDocs" class="primary-btn" type="button">Generate documents</button>
+            <div class="topbar-actions">
+              <button id="setDownloadFolder" class="ghost-btn" type="button" title="Pick a folder once; future résumé + cover-letter + Excel downloads land there.">Set download folder</button>
+              <button id="generateDocs" class="primary-btn" type="button">Generate documents</button>
+            </div>
           </div>
 
           <p class="resume-note">

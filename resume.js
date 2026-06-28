@@ -26,6 +26,99 @@
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
   }
 
+  /* ---------- download-folder picker (File System Access API) ----------
+   * Browsers don't let pages dictate a save path — but if the user picks a
+   * directory ONCE via showDirectoryPicker(), we can write subsequent files
+   * straight into it without prompts. Handle persists in IndexedDB so it
+   * survives reloads. Chrome/Edge only; falls back to default browser
+   * download on Firefox/Safari (where the API doesn't exist).
+   */
+  const FS_DB_NAME = "jobpulse-fs";
+  const FS_STORE = "handles";
+  const FS_KEY = "downloadDir";
+  const fsSupported = () => typeof window.showDirectoryPicker === "function";
+
+  function fsOpenDB() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) return reject(new Error("IndexedDB unavailable"));
+      const req = window.indexedDB.open(FS_DB_NAME, 1);
+      req.onupgradeneeded = () => req.result.createObjectStore(FS_STORE);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function fsTx(mode, fn) {
+    const db = await fsOpenDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(FS_STORE, mode);
+      const store = tx.objectStore(FS_STORE);
+      const out = fn(store);
+      tx.oncomplete = () => resolve(out && out.result !== undefined ? out.result : undefined);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+  async function fsLoadHandle() {
+    try { return await fsTx("readonly", (s) => s.get(FS_KEY)) || null; }
+    catch (_) { return null; }
+  }
+  async function fsSaveHandle(handle) {
+    try { await fsTx("readwrite", (s) => s.put(handle, FS_KEY)); } catch (_) {}
+  }
+  async function fsClearHandle() {
+    try { await fsTx("readwrite", (s) => s.delete(FS_KEY)); } catch (_) {}
+  }
+  async function fsPickFolder() {
+    if (!fsSupported()) {
+      alert("Your browser doesn't support choosing a folder. Use Chrome or Edge, or just change the browser's default download folder.");
+      return null;
+    }
+    try {
+      const handle = await window.showDirectoryPicker({ mode: "readwrite", startIn: "desktop" });
+      await fsSaveHandle(handle);
+      return handle;
+    } catch (err) {
+      if (err && err.name === "AbortError") return null; // user cancelled
+      console.warn("Folder pick failed:", err);
+      return null;
+    }
+  }
+  async function fsWritableHandle() {
+    const handle = await fsLoadHandle();
+    if (!handle) return null;
+    try {
+      const perm = await handle.queryPermission({ mode: "readwrite" });
+      if (perm === "granted") return handle;
+      const req = await handle.requestPermission({ mode: "readwrite" });
+      return req === "granted" ? handle : null;
+    } catch (_) { return null; }
+  }
+  async function fsWriteBlob(handle, filename, blob) {
+    const fileHandle = await handle.getFileHandle(filename, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  }
+  async function fsRefreshButton() {
+    const btn = $("setDownloadFolder");
+    if (!btn) return;
+    if (!fsSupported()) {
+      btn.textContent = "Folder picker unsupported here";
+      btn.disabled = true;
+      btn.title = "Use Chrome or Edge, or change your browser's default download folder.";
+      return;
+    }
+    const handle = await fsLoadHandle();
+    if (handle && handle.name) {
+      btn.textContent = `Downloads → ${handle.name} · Change`;
+      btn.classList.add("active");
+      btn.title = `Files will be saved to your chosen "${handle.name}" folder.`;
+    } else {
+      btn.textContent = "Set download folder";
+      btn.classList.remove("active");
+      btn.title = "Pick a folder once; future résumé + cover-letter + Excel downloads land there.";
+    }
+  }
+
   let resumeFileText = ""; // extracted text from an uploaded file
 
   /* ---------- résumé file parsing ---------- */
@@ -232,7 +325,21 @@
       if (it.type === "heading") y += GAP.afterHeading * scale;
     });
 
-    doc.save(filename);
+    // If the user picked a JobPulse folder, write straight into it. Otherwise
+    // fall back to the standard browser download (default Downloads folder).
+    (async () => {
+      const handle = await fsWritableHandle();
+      if (handle) {
+        try {
+          await fsWriteBlob(handle, filename, doc.output("blob"));
+          setStatus("Saved", `Wrote ${filename} into your "${handle.name}" folder.`, "score-mid");
+          return;
+        } catch (err) {
+          console.warn("Direct-write to chosen folder failed; falling back to default download.", err);
+        }
+      }
+      doc.save(filename);
+    })();
   }
 
   /* ---------- clipboard ---------- */
@@ -261,7 +368,25 @@
         $("rCompany").value = t.company || "";
         $("rJobDesc").value = t.jobDesc || "";
         sessionStorage.removeItem("jobpulse-tailor");
-        setStatus("Ready", `Loaded ${t.title || "role"} at ${t.company}. Add your résumé, then Generate.`, "score-mid");
+
+        // Clear any previous role's output so the user never sees stale text.
+        // This was the "same résumé for every role" bug — the textareas held the
+        // last generation, and unless the user clicked Generate again, the new
+        // role looked identical to the old one.
+        $("resumeTextOut").value = "";
+        $("coverTextOut").value = "";
+
+        const haveResume =
+          (typeof resumeFileText === "string" && resumeFileText.trim().length > 200) ||
+          ($("rResumeText").value.trim().length > 200);
+
+        if (haveResume) {
+          setStatus("Tailoring", `Generating fresh résumé + cover letter for ${t.title || "role"} at ${t.company}…`, "score-mid");
+          // Small delay so the user sees the prefill happen, then auto-Generate.
+          setTimeout(() => $("generateDocs").click(), 250);
+        } else {
+          setStatus("Ready", `Loaded ${t.title || "role"} at ${t.company}. Upload or paste your résumé, then Generate.`, "score-mid");
+        }
         return;
       }
       if (typeof state !== "undefined" && typeof jobs !== "undefined" && !$("rCompany").value) {
@@ -301,7 +426,21 @@
     window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet([{ Note: "Borderline roles you flag go here" }]), "Flagged");
     window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet([{ Note: "Excluded roles are filtered automatically by the feed (senior, no-sponsorship, contract, stack mismatch, staffing)" }]), "Excluded");
     window.XLSX.utils.book_append_sheet(wb, window.XLSX.utils.json_to_sheet(sponsorship.length ? sponsorship : [{ Note: "Load the dashboard first" }]), "Sponsorship Verification");
-    window.XLSX.writeFile(wb, `Vruttant_JobSearch_Tracker_${today}.xlsx`);
+    const xlsxName = `Vruttant_JobSearch_Tracker_${today}.xlsx`;
+    (async () => {
+      const handle = await fsWritableHandle();
+      if (handle) {
+        try {
+          const buf = window.XLSX.write(wb, { bookType: "xlsx", type: "array" });
+          const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+          await fsWriteBlob(handle, xlsxName, blob);
+          return;
+        } catch (err) {
+          console.warn("Excel direct-write failed; falling back to default download.", err);
+        }
+      }
+      window.XLSX.writeFile(wb, xlsxName);
+    })();
   }
 
   /* ---------- wiring ---------- */
@@ -327,6 +466,16 @@
     });
 
     if ($("exportExcel")) $("exportExcel").addEventListener("click", exportExcel);
+
+    const folderBtn = $("setDownloadFolder");
+    if (folderBtn) {
+      folderBtn.addEventListener("click", async () => {
+        // If a folder is already chosen, second click lets the user re-pick (no separate "clear").
+        await fsPickFolder();
+        await fsRefreshButton();
+      });
+      fsRefreshButton();
+    }
   }
 
   if (document.readyState === "loading") {

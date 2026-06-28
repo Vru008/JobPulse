@@ -766,3 +766,10 @@ textarea {
   font-size: 0.92rem;
   opacity: 0.92;
 }
+
+/* Download-folder picker: highlight the ghost button once a folder is set */
+#setDownloadFolder.active {
+  background: rgba(73, 197, 132, 0.16);
+  border-color: rgba(73, 197, 132, 0.4);
+  color: #c8f5dc;
+}
