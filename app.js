@@ -895,3 +895,161 @@ setInterval(updateNextSweepDisplay, 60 * 1000); // tick every minute so it stays
     if (field) field.addEventListener(eventName, paintWatcher);
   });
 });
+
+/* ---------- Ask Assistant (Application Q&A) ---------- */
+
+const ASK_ENDPOINTS = ["/api/ask", "/.netlify/functions/ask"];
+const CHAT_KEY = "jobpulse-chat";
+let chatHistory = [];
+try {
+  chatHistory = JSON.parse(localStorage.getItem(CHAT_KEY) || "[]");
+  if (!Array.isArray(chatHistory)) chatHistory = [];
+} catch (_) { chatHistory = []; }
+
+// Build the candidate profile string from the saved Profile fields plus any
+// résumé text the user has already uploaded or pasted in Resume & Cover.
+function buildAskProfile() {
+  const p = (state && state.profile) || {};
+  const pastedResume = (document.querySelector("#rResumeText")?.value || "").trim();
+  const uploadedResume = (typeof resumeFileText === "string" ? resumeFileText : "").trim();
+  const resume = (pastedResume || uploadedResume || "").slice(0, 8000);
+  const parts = [];
+  if (p.location)     parts.push(`LOCATION: ${p.location}`);
+  if (p.experience)   parts.push(`EXPERIENCE LEVEL: ${p.experience}`);
+  if (p.sponsorship)  parts.push(`WORK AUTHORIZATION: ${p.sponsorship}`);
+  if (p.portfolio)    parts.push(`PORTFOLIO: ${p.portfolio}`);
+  if (p.targetTitles) parts.push(`TARGET ROLES: ${p.targetTitles}`);
+  if (p.skills)       parts.push(`CORE SKILLS: ${p.skills}`);
+  if (p.learning)     parts.push(`CURRENTLY LEARNING: ${p.learning}`);
+  if (p.salary)       parts.push(`SALARY TARGET: ${p.salary}`);
+  if (resume) {
+    parts.push("");
+    parts.push("RÉSUMÉ:");
+    parts.push(resume);
+  }
+  return parts.join("\n");
+}
+
+function chatScrollToBottom() {
+  const list = document.querySelector("#chatHistory");
+  if (list) list.scrollTop = list.scrollHeight;
+}
+
+function renderChat() {
+  const list = document.querySelector("#chatHistory");
+  if (!list) return;
+  list.innerHTML = "";
+  if (!chatHistory.length) {
+    const hint = document.createElement("div");
+    hint.className = "chat-msg a";
+    hint.textContent =
+      "Hi! Ask me anything about your job search — interview prep, how to position your React experience for a target company, what to put in a cold email, whether a posting is worth applying to. I'll answer strictly from your profile and résumé — never make things up.";
+    list.appendChild(hint);
+    return;
+  }
+  for (const m of chatHistory) {
+    const q = document.createElement("div");
+    q.className = "chat-msg q";
+    q.textContent = m.q;
+    list.appendChild(q);
+    const a = document.createElement("div");
+    let cls = "chat-msg a";
+    if (m.pending) cls += " thinking";
+    if (m.error) cls += " error";
+    a.className = cls;
+    a.textContent = m.a || (m.pending ? "Thinking…" : "(no answer)");
+    list.appendChild(a);
+  }
+  chatScrollToBottom();
+}
+
+async function sendChat(question) {
+  const profile = buildAskProfile();
+  if (!profile.trim()) {
+    chatHistory.push({
+      q: question,
+      a: "I don't have your profile yet. Go to the Resume & Cover tab, upload or paste your résumé, then come back and ask. (You can also fill in skills/target roles in the Profile tab.)",
+      error: true,
+    });
+    renderChat();
+    return;
+  }
+
+  const pending = { q: question, a: "", pending: true };
+  chatHistory.push(pending);
+  renderChat();
+
+  const recent = chatHistory
+    .slice(0, -1)
+    .filter((m) => m.a && !m.error)
+    .slice(-5)
+    .map((m) => ({ q: m.q, a: m.a }));
+
+  let answer = "";
+  let failReason = "";
+  for (const ep of ASK_ENDPOINTS) {
+    try {
+      const res = await fetch(ep, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile, question, history: recent }),
+      });
+      if (!res.ok) {
+        failReason = await res.text();
+        continue;
+      }
+      const data = await res.json();
+      answer = (data && data.answer) || "";
+      if (answer) break;
+    } catch (err) {
+      failReason = err && err.message ? err.message : "network error";
+    }
+  }
+
+  pending.pending = false;
+  if (answer) {
+    pending.a = answer;
+  } else {
+    pending.a = `Sorry, the assistant couldn't answer right now. (${failReason || "no response"}). Try again in a moment.`;
+    pending.error = true;
+  }
+  // Keep the last 20 exchanges in localStorage so context doesn't bloat.
+  try { localStorage.setItem(CHAT_KEY, JSON.stringify(chatHistory.slice(-20))); } catch (_) {}
+  renderChat();
+}
+
+const chatForm = document.querySelector("#chatForm");
+if (chatForm) {
+  const sendBtn = document.querySelector("#chatSendBtn");
+  chatForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.querySelector("#chatInput");
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = "Asking…"; }
+    try { await sendChat(text); }
+    finally {
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = "Ask"; }
+    }
+  });
+  // Cmd/Ctrl+Enter submits — handy when the textarea has focus.
+  document.querySelector("#chatInput")?.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      chatForm.requestSubmit();
+    }
+  });
+  renderChat();
+}
+
+const clearChatBtn = document.querySelector("#clearChatBtn");
+if (clearChatBtn) {
+  clearChatBtn.addEventListener("click", () => {
+    if (!chatHistory.length) return;
+    if (!confirm("Clear all chat history? This cannot be undone.")) return;
+    chatHistory = [];
+    try { localStorage.removeItem(CHAT_KEY); } catch (_) {}
+    renderChat();
+  });
+}
