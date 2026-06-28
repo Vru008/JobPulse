@@ -35,6 +35,39 @@ function keyOf(m) {
     .join("|");
 }
 
+// Hard US/remote-US filter — the aggregator's scope:"us" still leaks remote-global
+// listings whose location string is "USA"/"LATAM"/etc. We only want roles a person
+// in Jersey City could realistically apply to.
+const US_STATE_TOKENS = new Set([
+  "al","ak","az","ar","ca","co","ct","de","fl","ga","hi","id","il","in","ia","ks","ky","la","me","md","ma","mi","mn","ms","mo","mt","ne","nv","nh","nj","nm","ny","nc","nd","oh","ok","or","pa","ri","sc","sd","tn","tx","ut","vt","va","wa","wv","wi","wy","dc",
+]);
+const US_STATE_NAMES = [
+  "alabama","alaska","arizona","arkansas","california","colorado","connecticut","delaware","florida","georgia","hawaii","idaho","illinois","indiana","iowa","kansas","kentucky","louisiana","maine","maryland","massachusetts","michigan","minnesota","mississippi","missouri","montana","nebraska","nevada","new hampshire","new jersey","new mexico","new york","north carolina","north dakota","ohio","oklahoma","oregon","pennsylvania","rhode island","south carolina","south dakota","tennessee","texas","utah","vermont","virginia","washington","west virginia","wisconsin","wyoming","district of columbia",
+];
+const US_PHRASES = ["united states","usa","u.s.","u.s","us only","us-based","us based","(us)","remote us","remote, us","remote-us","anywhere in the us"];
+const NON_US_TOKENS = ["latam","latin america","emea","apac","europe","asia","africa","oceania","canada","canadian","mexico","brazil","argentina","peru","colombia","chile","uk","united kingdom","england","scotland","ireland","germany","france","spain","portugal","italy","netherlands","poland","romania","serbia","ukraine","turkey","india","pakistan","china","japan","korea","singapore","philippines","vietnam","indonesia","australia","new zealand","south africa","nigeria","kenya","egypt","israel","uae","dubai"];
+
+function isUsLocation(loc) {
+  if (!loc) return false;
+  const s = String(loc).toLowerCase().trim();
+  if (!s) return false;
+  for (const bad of NON_US_TOKENS) {
+    if (s.includes(bad)) return false;
+  }
+  if (s === "remote") return true;
+  for (const ph of US_PHRASES) {
+    if (s.includes(ph)) return true;
+  }
+  for (const name of US_STATE_NAMES) {
+    if (s.includes(name)) return true;
+  }
+  // Last: tokenize on non-alpha chars and look for a state abbrev or bare "us".
+  for (const tok of s.split(/[^a-z]+/)) {
+    if (US_STATE_TOKENS.has(tok) || tok === "us") return true;
+  }
+  return false;
+}
+
 function draftNote(job) {
   const co = job.company || "the team";
   const t = job.title || "the role";
@@ -89,6 +122,7 @@ module.exports = async function handler(req, res) {
         note: draftNote(job),
       };
       if (!match.url || !match.company || !match.role) continue;
+      if (!isUsLocation(match.location)) continue;
       const k = keyOf(match);
       if (seen.has(k) || usedKeys.has(k)) continue;
       usedKeys.add(k);
