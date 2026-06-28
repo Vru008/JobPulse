@@ -852,6 +852,43 @@ if (archiveWatcherBtn) {
   });
 }
 
+// "Next watcher run" sidebar clock — mirrors the GitHub Actions cron at
+// 12:05 / 17:05 / 22:05 UTC (= 8:05 AM / 1:05 PM / 6:05 PM ET in EDT). Shown
+// in the user's local timezone so it reads naturally.
+const CRON_UTC_HM = [[12, 5], [17, 5], [22, 5]];
+
+function nextSweepDate() {
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  for (const [h, m] of CRON_UTC_HM) {
+    const t = new Date(todayUtc + h * 3600000 + m * 60000);
+    if (t > now) return t;
+  }
+  // All today's runs are in the past — next is tomorrow's first slot.
+  const [h, m] = CRON_UTC_HM[0];
+  return new Date(todayUtc + 86400000 + h * 3600000 + m * 60000);
+}
+
+function formatSweepWhen(d) {
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const tomorrow = new Date(now.getTime() + 86400000);
+  const isTomorrow = d.toDateString() === tomorrow.toDateString();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (sameDay) return `Today, ${time}`;
+  if (isTomorrow) return `Tomorrow, ${time}`;
+  return d.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+}
+
+function updateNextSweepDisplay() {
+  const el = document.querySelector("#nextSweepTime");
+  if (!el) return;
+  el.textContent = formatSweepWhen(nextSweepDate());
+}
+
+updateNextSweepDisplay();
+setInterval(updateNextSweepDisplay, 60 * 1000); // tick every minute so it stays fresh
+
 ["input", "change"].forEach((eventName) => {
   ["#watchSearch", "#watchRole", "#watchMode"].forEach((selector) => {
     const field = document.querySelector(selector);

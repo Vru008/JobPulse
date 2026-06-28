@@ -368,7 +368,25 @@
         $("rCompany").value = t.company || "";
         $("rJobDesc").value = t.jobDesc || "";
         sessionStorage.removeItem("jobpulse-tailor");
-        setStatus("Ready", `Loaded ${t.title || "role"} at ${t.company}. Add your résumé, then Generate.`, "score-mid");
+
+        // Clear any previous role's output so the user never sees stale text.
+        // This was the "same résumé for every role" bug — the textareas held the
+        // last generation, and unless the user clicked Generate again, the new
+        // role looked identical to the old one.
+        $("resumeTextOut").value = "";
+        $("coverTextOut").value = "";
+
+        const haveResume =
+          (typeof resumeFileText === "string" && resumeFileText.trim().length > 200) ||
+          ($("rResumeText").value.trim().length > 200);
+
+        if (haveResume) {
+          setStatus("Tailoring", `Generating fresh résumé + cover letter for ${t.title || "role"} at ${t.company}…`, "score-mid");
+          // Small delay so the user sees the prefill happen, then auto-Generate.
+          setTimeout(() => $("generateDocs").click(), 250);
+        } else {
+          setStatus("Ready", `Loaded ${t.title || "role"} at ${t.company}. Upload or paste your résumé, then Generate.`, "score-mid");
+        }
         return;
       }
       if (typeof state !== "undefined" && typeof jobs !== "undefined" && !$("rCompany").value) {
