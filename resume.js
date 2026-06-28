@@ -471,6 +471,18 @@
     $("rFile").addEventListener("change", (e) => {
       if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
     });
+    // Belt-and-suspenders: a programmatic click on the file input from the
+    // visible "Upload" CTA. The standard <label for="rFile"> association
+    // usually triggers the picker, but on some Chrome versions / extensions
+    // the click can be eaten — this guarantees it opens.
+    const uploadCta = document.querySelector(".file-drop-cta");
+    if (uploadCta) {
+      uploadCta.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        $("rFile").click();
+      });
+    }
 
     $("generateDocs").addEventListener("click", generate);
 
