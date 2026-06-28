@@ -254,10 +254,27 @@
       .replace(/[^\x09\x0A\x20-\x7E]/g, "");
   }
 
+  // Brief visual confirmation on the actual button that was clicked.
+  function flashSaved(kind, message) {
+    const btn = document.querySelector(`[data-pdf="${kind}"]`);
+    if (!btn) return;
+    const original = btn.textContent;
+    btn.textContent = message || "Saved ✓";
+    btn.classList.add("flash-saved");
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.classList.remove("flash-saved");
+    }, 1800);
+  }
+
   function downloadPdf(kind) {
     const isResume = kind === "resume";
     const raw = $(isResume ? "resumeTextOut" : "coverTextOut").value.trim();
-    if (!raw) return setStatus("Nothing yet", "Generate the documents first.", "score-low");
+    if (!raw) {
+      setStatus("Nothing yet", "Click 'Generate documents' first — the output box is empty.", "score-low");
+      flashSaved(kind, "Generate first ⚠");
+      return;
+    }
     const text = sanitize(raw);
 
     const { jsPDF } = window.jspdf;
@@ -333,12 +350,15 @@
         try {
           await fsWriteBlob(handle, filename, doc.output("blob"));
           setStatus("Saved", `Wrote ${filename} into your "${handle.name}" folder.`, "score-mid");
+          flashSaved(kind, `Saved to ${handle.name} ✓`);
           return;
         } catch (err) {
           console.warn("Direct-write to chosen folder failed; falling back to default download.", err);
+          setStatus("Save failed", `Could not write to "${handle.name}". Downloading to your default Downloads folder instead.`, "score-low");
         }
       }
       doc.save(filename);
+      flashSaved(kind, "Downloaded ✓");
     })();
   }
 
