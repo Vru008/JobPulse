@@ -840,3 +840,12 @@ textarea {
   align-self: stretch;
   min-width: 88px;
 }
+
+/* Watcher cards — Applied action button, with a clearly-positive
+   visual once the role has been marked applied. */
+.applied-btn { font-weight: 700; }
+.applied-btn.is-applied {
+  background: rgba(20, 108, 95, 0.12);
+  border: 1px solid rgba(20, 108, 95, 0.45);
+  color: var(--accent);
+}
