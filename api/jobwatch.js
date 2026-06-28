@@ -3,7 +3,7 @@
  * POST { matches:[...], lastSweep?, mode? } -> { ok:true, count }
  * Auth: header x-jobpulse-pass must equal env SYNC_PASSCODE.
  */
-const { getWatch, setWatch } = require("../lib/jobwatch-core");
+const { getWatch, setWatch, markApplied, unmarkApplied } = require("../lib/jobwatch-core");
 
 module.exports = async function handler(req, res) {
   const token = req.headers["x-jobpulse-pass"] || "";
@@ -14,7 +14,15 @@ module.exports = async function handler(req, res) {
     } else if (req.method === "POST") {
       let body = req.body;
       if (typeof body === "string") body = JSON.parse(body || "{}");
-      const result = await setWatch(token, body || {});
+      body = body || {};
+      let result;
+      if (body.action === "markApplied") {
+        result = await markApplied(token, body.match);
+      } else if (body.action === "unmarkApplied") {
+        result = await unmarkApplied(token, body.match);
+      } else {
+        result = await setWatch(token, body);
+      }
       res.status(200).json(result);
     } else {
       res.status(405).send("Method Not Allowed");

@@ -771,14 +771,30 @@ function watcherCard(match) {
     });
     actions.appendChild(copy);
   }
+
+  // Applied / Un-apply button. In the Applied view it lets the user undo;
+  // in Fresh + Archive views it moves the role into Applied.
+  const isApplied = watcherView === "applied";
+  const applyBtn = document.createElement("button");
+  applyBtn.className = "ghost-btn applied-btn" + (isApplied ? " is-applied" : "");
+  applyBtn.type = "button";
+  applyBtn.textContent = isApplied ? "Un-apply" : "Applied";
+  applyBtn.title = isApplied
+    ? "Move this role back to Archive."
+    : `Mark this role as applied — moves it into the Applied view${match.appliedAt ? "" : ""}.`;
+  applyBtn.addEventListener("click", () => watcherMarkApplied(match, !isApplied));
+  actions.appendChild(applyBtn);
+
   card.appendChild(actions);
   return card;
 }
 
 let watcherCurrent = [];
 let watcherArchive = [];
+let watcherApplied = [];
 let watcherMeta = { loaded: false, lastSweep: null };
-let watcherShowArchive = false;
+// Which bucket is currently visible in the Watcher tab: "fresh" | "archive" | "applied".
+let watcherView = "fresh";
 
 function watchRoleCategory(title) {
   const t = (title || "").toLowerCase();
@@ -806,33 +822,47 @@ function watchFilter(matches) {
   });
 }
 
-// Repaint the Watcher list — either fresh (current) or archive, based on the toggle.
+// Repaint the Watcher list based on which bucket the user is viewing.
 function paintWatcher() {
   const list = document.querySelector("#watcherList");
   const status = document.querySelector("#watcherStatus");
   const heading = document.querySelector("#watcherHeading");
   const archBtn = document.querySelector("#archiveWatcherBtn");
+  const appliedBtn = document.querySelector("#appliedWatcherBtn");
   list.innerHTML = "";
 
+  // Header button states reflect the current view.
   if (archBtn) {
-    archBtn.textContent = watcherShowArchive
+    archBtn.textContent = watcherView === "archive"
       ? `Back to fresh (${watcherCurrent.length})`
       : `Archive (${watcherArchive.length})`;
-    archBtn.setAttribute("aria-pressed", watcherShowArchive ? "true" : "false");
+    archBtn.setAttribute("aria-pressed", watcherView === "archive" ? "true" : "false");
+  }
+  if (appliedBtn) {
+    appliedBtn.textContent = watcherView === "applied"
+      ? `Back to fresh (${watcherCurrent.length})`
+      : `Applied (${watcherApplied.length})`;
+    appliedBtn.setAttribute("aria-pressed", watcherView === "applied" ? "true" : "false");
   }
   if (heading) {
-    heading.textContent = watcherShowArchive
-      ? "Archive · all previously surfaced roles"
+    heading.textContent =
+      watcherView === "archive" ? "Archive · all previously surfaced roles"
+      : watcherView === "applied" ? "Applied · roles you've marked as applied"
       : "Fresh roles from the latest sweep";
   }
 
-  const source = watcherShowArchive ? watcherArchive : watcherCurrent;
+  const source =
+    watcherView === "archive" ? watcherArchive
+    : watcherView === "applied" ? watcherApplied
+    : watcherCurrent;
 
   if (!source.length) {
     if (!watcherMeta.loaded) {
       status.textContent = "Watcher store not reachable yet.";
-    } else if (watcherShowArchive) {
+    } else if (watcherView === "archive") {
       status.textContent = "Archive is empty — older sweeps will collect here as new ones arrive.";
+    } else if (watcherView === "applied") {
+      status.textContent = "You haven't marked any roles as applied yet. Click 'Applied' on a card after you apply.";
     } else {
       status.textContent = "No fresh matches yet. They appear after the next scheduled sweep (8 AM / 1 PM / 6 PM ET).";
     }
@@ -841,7 +871,10 @@ function paintWatcher() {
 
   const filtered = watchFilter(source);
   const swept = watcherMeta.lastSweep ? ` · last sweep ${timeAgo(watcherMeta.lastSweep)}` : "";
-  const label = watcherShowArchive ? "archived role" : "fresh match";
+  const label =
+    watcherView === "archive" ? "archived role"
+    : watcherView === "applied" ? "applied role"
+    : "fresh match";
   status.textContent = `Showing ${filtered.length} of ${source.length} ${label}${source.length === 1 ? "" : "s"}${swept}.`;
   filtered.forEach((m) => list.appendChild(watcherCard(m)));
 }
@@ -849,9 +882,10 @@ function paintWatcher() {
 function renderWatcher(data) {
   watcherCurrent = (data && data.current) || [];
   watcherArchive = (data && data.archive) || [];
+  watcherApplied = (data && data.applied) || [];
   watcherMeta = { loaded: !!data, lastSweep: data && data.lastSweep };
   // Default to the fresh view on every load.
-  watcherShowArchive = false;
+  watcherView = "fresh";
   paintWatcher();
 }
 
@@ -881,9 +915,69 @@ if (refreshWatcherBtn) {
 const archiveWatcherBtn = document.querySelector("#archiveWatcherBtn");
 if (archiveWatcherBtn) {
   archiveWatcherBtn.addEventListener("click", () => {
-    watcherShowArchive = !watcherShowArchive;
+    watcherView = watcherView === "archive" ? "fresh" : "archive";
     paintWatcher();
   });
+}
+
+const appliedWatcherBtn = document.querySelector("#appliedWatcherBtn");
+if (appliedWatcherBtn) {
+  appliedWatcherBtn.addEventListener("click", () => {
+    watcherView = watcherView === "applied" ? "fresh" : "applied";
+    paintWatcher();
+  });
+}
+
+// Mark / un-mark a watcher role as applied. Optimistic local update so the UI
+// snaps; then sync to the server. Errors fall back gracefully.
+async function watcherMarkApplied(match, apply) {
+  const action = apply ? "markApplied" : "unmarkApplied";
+  const key = ["company", "role", "location"]
+    .map((k) => String((match && match[k]) || "").trim().toLowerCase())
+    .join("|");
+
+  if (apply) {
+    const existing =
+      watcherCurrent.find((m) => sameKey(m, key)) ||
+      watcherArchive.find((m) => sameKey(m, key)) ||
+      match;
+    const stamped = { ...existing, appliedAt: new Date().toISOString() };
+    watcherCurrent = watcherCurrent.filter((m) => !sameKey(m, key));
+    watcherArchive = watcherArchive.filter((m) => !sameKey(m, key));
+    watcherApplied = [stamped, ...watcherApplied.filter((m) => !sameKey(m, key))];
+  } else {
+    const found = watcherApplied.find((m) => sameKey(m, key));
+    watcherApplied = watcherApplied.filter((m) => !sameKey(m, key));
+    if (found) {
+      const { appliedAt, ...rest } = found;
+      watcherArchive = [rest, ...watcherArchive.filter((m) => !sameKey(m, key))];
+    }
+  }
+  paintWatcher();
+
+  const token = syncToken();
+  const payload = JSON.stringify({
+    action,
+    match: { company: match.company, role: match.role, location: match.location },
+  });
+  for (const endpoint of WATCH_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-jobpulse-pass": token },
+        body: payload,
+      });
+      if (res.ok) return;
+    } catch (_) { /* try next endpoint */ }
+  }
+  // If both endpoints failed, refetch so the UI matches reality.
+  loadWatcher(true);
+}
+
+function sameKey(m, key) {
+  return ["company", "role", "location"]
+    .map((k) => String((m && m[k]) || "").trim().toLowerCase())
+    .join("|") === key;
 }
 
 // "Next watcher run" sidebar clock — mirrors the GitHub Actions cron at
