@@ -1,0 +1,39 @@
+name: Indeed Watcher cron (3x/day)
+
+# Fires the Vercel /api/cron-watcher endpoint on a free, durable schedule that
+# does NOT require Claude Code, the laptop, or any local process to be running.
+#
+# Times are UTC. 8 AM / 1 PM / 6 PM US-Eastern in EDT (Mar–Nov) =
+# 12:05 / 17:05 / 22:05 UTC. During EST (Nov–Mar) those shift to 7:05/12:05/5:05
+# Eastern — close enough; you can rebalance the schedule then if it matters.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   CRON_SECRET — must match the env var of the same name on Vercel
+#
+# You can also trigger it manually from the Actions tab via "Run workflow".
+
+on:
+  schedule:
+    - cron: "5 12 * * *"
+    - cron: "5 17 * * *"
+    - cron: "5 22 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit /api/cron-watcher
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET repo secret is not set."
+            exit 1
+          fi
+          response=$(curl -sS -o /tmp/body.txt -w "%{http_code}" \
+            -X POST "https://job-pulse-plum.vercel.app/api/cron-watcher" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "HTTP $response"
+          cat /tmp/body.txt
+          test "$response" = "200"
