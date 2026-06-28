@@ -767,9 +767,22 @@ textarea {
   opacity: 0.92;
 }
 
-/* Download-folder picker: highlight the ghost button once a folder is set */
+/* Download-folder picker: high-contrast confirmation when a folder is set */
 #setDownloadFolder.active {
-  background: rgba(73, 197, 132, 0.16);
-  border-color: rgba(73, 197, 132, 0.4);
-  color: #c8f5dc;
+  background: var(--accent);
+  color: #ffffff;
+  border: 1px solid var(--accent);
+  font-weight: 700;
+}
+#setDownloadFolder.active:hover { filter: brightness(1.1); }
+
+/* Brief "Saved ✓" flash on the doc-action buttons (Download PDF / Copy) so the
+   user gets unmistakable confirmation even when the file was written directly
+   into a chosen folder rather than the browser's default Downloads. */
+.ghost-btn.flash-saved,
+.primary-btn.flash-saved {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  border-color: var(--accent) !important;
+  transition: background 0.2s ease, color 0.2s ease;
 }
