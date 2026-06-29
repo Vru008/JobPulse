@@ -49,17 +49,24 @@ function jobDaySeed() {
 }
 
 const state = {
-  profile: JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {
-    targetTitles: "Frontend Developer, React Developer, Full Stack Developer, Software Engineer, UI/UX Engineer",
-    skills: "React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs, MongoDB, Express",
-    location: "United States, Remote",
-    experience: "Junior to mid level",
-    salary: "$80k+",
-    sponsorship: "On F-1 OPT (authorized now), needs future H-1B sponsorship",
-    portfolio: "https://job-mate-nu.vercel.app",
-    learning: "TypeScript, Next.js",
-    gradDate: "Sept 2026",
-  },
+  // Merge new defaults into any saved profile so a localStorage record from
+  // before a new field existed still fills in (otherwise gradDate stays
+  // undefined and the AI guesses a wrong year).
+  profile: (() => {
+    const DEFAULTS = {
+      targetTitles: "Frontend Developer, React Developer, Full Stack Developer, Software Engineer, UI/UX Engineer",
+      skills: "React, JavaScript, TypeScript, Next.js, Node.js, Tailwind, REST APIs, MongoDB, Express",
+      location: "United States, Remote",
+      experience: "Junior to mid level",
+      salary: "$80k+",
+      sponsorship: "On F-1 OPT (authorized now), needs future H-1B sponsorship",
+      portfolio: "https://job-mate-nu.vercel.app",
+      learning: "TypeScript, Next.js",
+      gradDate: "Sept 2026",
+    };
+    const saved = JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {};
+    return { ...DEFAULTS, ...saved };
+  })(),
   enabledSources: JSON.parse(localStorage.getItem("jobpulse-sources") || "null") || sources.reduce((acc, source) => {
     acc[source.id] = source.enabled;
     return acc;
