@@ -56,6 +56,7 @@ const state = {
     sponsorship: "On F-1 OPT (authorized now), needs future H-1B sponsorship",
     portfolio: "https://job-mate-nu.vercel.app",
     learning: "TypeScript, Next.js",
+    gradDate: "Sept 2026",
   },
   enabledSources: JSON.parse(localStorage.getItem("jobpulse-sources") || "null") || sources.reduce((acc, source) => {
     acc[source.id] = source.enabled;
@@ -597,7 +598,7 @@ initialiseViewFromHash();
 
 document.querySelector("#saveProfile").addEventListener("click", (event) => {
   event.preventDefault();
-  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship", "portfolio", "learning"].forEach((key) => {
+  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship", "portfolio", "learning", "gradDate"].forEach((key) => {
     const field = document.querySelector(`#${key}`);
     if (field) state.profile[key] = field.value;
   });
@@ -1049,6 +1050,7 @@ function buildAskProfile() {
   if (p.targetTitles) parts.push(`TARGET ROLES: ${p.targetTitles}`);
   if (p.skills)       parts.push(`CORE SKILLS: ${p.skills}`);
   if (p.learning)     parts.push(`CURRENTLY LEARNING: ${p.learning}`);
+  if (p.gradDate)     parts.push(`EXPECTED GRADUATION: ${p.gradDate}`);
   if (p.salary)       parts.push(`SALARY TARGET: ${p.salary}`);
   if (resume) {
     parts.push("");

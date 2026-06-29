@@ -198,6 +198,7 @@
         jobDescription: jobDesc,
         portfolio: profile.portfolio || "",
         currentlyLearning: profile.learning || "",
+        gradDate: profile.gradDate || "",
       });
       let res = null;
       let lastDetail = "";
