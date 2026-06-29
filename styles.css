@@ -100,11 +100,27 @@ a {
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  padding: 24px;
-  background: #203335;
+  gap: 24px;
+  padding: 24px 20px;
+  background: linear-gradient(180deg, #1a2a2c 0%, #203335 60%, #243b3d 100%);
   color: #f5fbf8;
+  /* Stick to the top so it never scrolls with the main pane. align-self:start
+     is required for grid children to honor sticky in the cross-axis. */
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
+/* Subtle scrollbar so the sidebar feels integrated, not utilitarian. */
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.22); }
 
 .brand {
   display: flex;
@@ -117,10 +133,12 @@ a {
   width: 44px;
   height: 44px;
   place-items: center;
-  border-radius: 8px;
-  background: #f0c36a;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f5d27a 0%, #e9b04a 100%);
   color: #203335;
-  font-weight: 800;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  box-shadow: 0 6px 14px rgba(240, 195, 106, 0.25), inset 0 -2px 0 rgba(0, 0, 0, 0.08);
 }
 
 .brand div {
@@ -150,25 +168,57 @@ nav {
 }
 
 .nav-item {
+  position: relative;
   text-align: left;
   padding: 0 14px;
-  color: #dfecea;
+  color: #b8cac8;
   background: transparent;
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+  transition: background 0.18s ease, color 0.18s ease, padding-left 0.18s ease;
 }
-
-.nav-item.active,
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+.nav-item.active {
+  color: #ffffff;
+  background: rgba(240, 195, 106, 0.10);
+  padding-left: 20px;
+}
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 4px;
+  background: #f0c36a;
+  box-shadow: 0 0 8px rgba(240, 195, 106, 0.45);
 }
 
 .sync-panel {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin-top: auto;
   padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
 }
+.sync-panel strong {
+  font-size: 1.05rem;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.sync-panel .ghost-btn {
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 0.9rem;
+}
+.sync-panel .ghost-btn:hover { background: #ffffff; }
 
 .ghost-btn {
   color: #203335;
@@ -253,13 +303,21 @@ textarea {
 .primary-btn {
   display: inline-grid;
   place-items: center;
-  padding: 0 16px;
+  padding: 0 18px;
   color: #fff;
   background: var(--accent);
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
+  letter-spacing: 0.01em;
+  transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05), 0 6px 18px rgba(20, 108, 95, 0.18);
 }
+.primary-btn:hover { filter: brightness(1.08); box-shadow: 0 1px 0 rgba(0,0,0,0.05), 0 10px 24px rgba(20, 108, 95, 0.26); }
+.primary-btn:active { transform: translateY(1px); }
+
+.ghost-btn { transition: background 0.15s ease, color 0.15s ease; }
+.ghost-btn:hover { background: #eaf2ef; }
 
 .view {
   display: none;
@@ -282,9 +340,14 @@ textarea {
 .source-card,
 .tracker-empty {
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 14px;
   background: var(--panel);
-  box-shadow: var(--shadow);
+  box-shadow: 0 1px 2px rgba(24, 33, 38, 0.04), 0 12px 32px rgba(24, 33, 38, 0.06);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.job-card:hover {
+  border-color: rgba(20, 108, 95, 0.30);
+  box-shadow: 0 1px 2px rgba(24, 33, 38, 0.05), 0 20px 44px rgba(24, 33, 38, 0.09);
 }
 
 .metrics article {
