@@ -49,9 +49,12 @@ function jobDaySeed() {
 }
 
 const state = {
-  // Merge new defaults into any saved profile so a localStorage record from
-  // before a new field existed still fills in (otherwise gradDate stays
-  // undefined and the AI guesses a wrong year).
+  // Merge new defaults into any saved profile.
+  //   - Saved values from localStorage win over defaults
+  //   - BUT an empty / null / undefined saved value does NOT override the
+  //     default (otherwise an old saved profile with "" for a new field
+  //     like gradDate would silently clobber the "Sept 2026" default and
+  //     the AI would invent a date).
   profile: (() => {
     const DEFAULTS = {
       targetTitles: "Frontend Developer, React Developer, Full Stack Developer, Software Engineer, UI/UX Engineer",
@@ -65,7 +68,12 @@ const state = {
       gradDate: "Sept 2026",
     };
     const saved = JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {};
-    return { ...DEFAULTS, ...saved };
+    const merged = { ...DEFAULTS };
+    for (const k of Object.keys(saved)) {
+      const v = saved[k];
+      if (v != null && String(v).trim() !== "") merged[k] = v;
+    }
+    return merged;
   })(),
   enabledSources: JSON.parse(localStorage.getItem("jobpulse-sources") || "null") || sources.reduce((acc, source) => {
     acc[source.id] = source.enabled;
@@ -521,7 +529,9 @@ function renderTracker() {
 function renderProfile() {
   Object.entries(state.profile).forEach(([key, value]) => {
     const field = document.querySelector(`#${key}`);
-    if (field) field.value = value;
+    // Skip empty values so HTML defaults (e.g. value="Sept 2026") aren't
+    // clobbered with "" when state hasn't loaded the field yet.
+    if (field && value != null && String(value).trim() !== "") field.value = value;
   });
 }
 
