@@ -593,8 +593,9 @@ window.addEventListener("popstate", (event) => {
 // On load (and after login), honor a hash like /#watcher so deep links work and
 // seed the very first history entry with a known view so back behaves cleanly.
 function initialiseViewFromHash() {
-  const want = (location.hash || "").replace(/^#/, "") || "dashboard";
-  const target = document.querySelector(`.nav-item[data-view="${want}"]`) ? want : "dashboard";
+  const DEFAULT_VIEW = "watcher"; // Indeed Watcher is the new landing
+  const want = (location.hash || "").replace(/^#/, "") || DEFAULT_VIEW;
+  const target = document.querySelector(`.nav-item[data-view="${want}"]`) ? want : DEFAULT_VIEW;
   setActiveView(target, { replaceHistory: true });
 }
 initialiseViewFromHash();
@@ -615,10 +616,12 @@ document.querySelector("#saveProfile").addEventListener("click", (event) => {
   loadJobs();
 });
 
+// Sidebar "Refresh now" reloads both watcher feeds — the Dashboard view is no
+// longer reachable so refreshing /api/jobs would be invisible. Whichever
+// watcher tab is open will repaint with the fresh data on completion.
 document.querySelector("#refreshBtn").addEventListener("click", () => {
-  state.hidden = {};
-  save("hidden", state.hidden);
-  loadJobs(true);
+  if (typeof loadWatcher === "function") loadWatcher(true);
+  if (typeof loadLinkedin === "function") loadLinkedin(true);
 });
 
 const refreshGlobalBtn = document.querySelector("#refreshGlobalBtn");
