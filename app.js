@@ -1197,3 +1197,298 @@ if (clearChatBtn) {
     renderChat();
   });
 }
+
+/* ---------- LinkedIn Watcher (parallel to Indeed Watcher) ---------- */
+
+const LINKEDIN_ENDPOINTS = ["/api/linkedinwatch", "/.netlify/functions/linkedinwatch"];
+let linkedinLoaded = false;
+let linkedinCurrent = [];
+let linkedinArchive = [];
+let linkedinApplied = [];
+let linkedinMeta = { loaded: false, lastSweep: null };
+let linkedinView = "fresh"; // "fresh" | "archive" | "applied"
+
+function linkedinFilter(matches) {
+  const q = (document.querySelector("#linkedinSearch")?.value || "").trim().toLowerCase();
+  const role = document.querySelector("#linkedinRole")?.value || "all";
+  const mode = document.querySelector("#linkedinMode")?.value || "all";
+  return matches.filter((m) => {
+    if (q && !`${m.role} ${m.company} ${m.location}`.toLowerCase().includes(q)) return false;
+    if (role !== "all" && watchRoleCategory(m.role) !== role) return false;
+    if (mode !== "all") {
+      const remote = /remote/i.test(m.location || "");
+      if (mode === "remote" && !remote) return false;
+      if (mode === "onsite" && remote) return false;
+    }
+    return true;
+  });
+}
+
+// Card builder mirrors watcherCard with its own Mark-applied wiring so a bug
+// in the Indeed card cannot break LinkedIn.
+function linkedinCard(match) {
+  const card = document.createElement("article");
+  card.className = "job-card";
+
+  const main = document.createElement("div");
+  main.className = "job-main";
+  const left = document.createElement("div");
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "job-title-row";
+  const h3 = document.createElement("h3");
+  if (match.url) {
+    const a = document.createElement("a");
+    a.href = match.url;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    a.textContent = match.role || "Role";
+    h3.appendChild(a);
+  } else {
+    h3.textContent = match.role || "Role";
+  }
+  titleRow.appendChild(h3);
+  if (match.fit) {
+    const band = document.createElement("span");
+    band.className = "fit-band";
+    band.textContent = match.fit;
+    titleRow.appendChild(band);
+  }
+  left.appendChild(titleRow);
+
+  const company = document.createElement("p");
+  company.className = "company";
+  company.textContent = match.company || "";
+  left.appendChild(company);
+
+  const meta = document.createElement("p");
+  meta.className = "meta";
+  meta.textContent = [match.location, match.postedOn ? `posted ${match.postedOn}` : "", timeAgo(match.firstSeen)]
+    .filter(Boolean)
+    .join(" · ");
+  left.appendChild(meta);
+
+  main.appendChild(left);
+  card.appendChild(main);
+
+  if (match.note) {
+    const details = document.createElement("details");
+    details.className = "watch-note";
+    const summary = document.createElement("summary");
+    summary.textContent = "Draft application note";
+    const p = document.createElement("p");
+    p.textContent = match.note;
+    details.appendChild(summary);
+    details.appendChild(p);
+    card.appendChild(details);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "job-actions";
+  if (match.url) {
+    const apply = document.createElement("a");
+    apply.className = "apply-link";
+    apply.href = match.url;
+    apply.target = "_blank";
+    apply.rel = "noreferrer";
+    apply.textContent = "Apply on LinkedIn";
+    actions.appendChild(apply);
+  }
+
+  const tailor = document.createElement("button");
+  tailor.className = "tailor-btn";
+  tailor.type = "button";
+  tailor.textContent = "Tailor résumé";
+  tailor.addEventListener("click", () => {
+    sessionStorage.setItem("jobpulse-tailor", JSON.stringify({
+      company: match.company,
+      title: match.role,
+      jobDesc: `${match.role} at ${match.company}\nLocation: ${match.location || ""}\n${match.fit || ""}\n\nApply: ${match.url || ""}`,
+    }));
+    document.querySelector('.nav-item[data-view="resume"]').click();
+  });
+  actions.appendChild(tailor);
+
+  if (match.note) {
+    const copy = document.createElement("button");
+    copy.className = "ghost-btn";
+    copy.type = "button";
+    copy.textContent = "Copy note";
+    copy.addEventListener("click", () => {
+      navigator.clipboard?.writeText(match.note);
+      copy.textContent = "Copied ✓";
+      setTimeout(() => (copy.textContent = "Copy note"), 1500);
+    });
+    actions.appendChild(copy);
+  }
+
+  const isApplied = linkedinView === "applied";
+  const applyBtn = document.createElement("button");
+  applyBtn.className = "ghost-btn applied-btn" + (isApplied ? " is-applied" : "");
+  applyBtn.type = "button";
+  applyBtn.textContent = isApplied ? "Un-apply" : "Applied";
+  applyBtn.addEventListener("click", () => linkedinMarkApplied(match, !isApplied));
+  actions.appendChild(applyBtn);
+
+  card.appendChild(actions);
+  return card;
+}
+
+function paintLinkedin() {
+  const list = document.querySelector("#linkedinList");
+  const status = document.querySelector("#linkedinStatus");
+  const heading = document.querySelector("#linkedinHeading");
+  const archBtn = document.querySelector("#archiveLinkedinBtn");
+  const appBtn = document.querySelector("#appliedLinkedinBtn");
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (archBtn) {
+    archBtn.textContent = linkedinView === "archive"
+      ? `Back to fresh (${linkedinCurrent.length})`
+      : `Archive (${linkedinArchive.length})`;
+    archBtn.setAttribute("aria-pressed", linkedinView === "archive" ? "true" : "false");
+  }
+  if (appBtn) {
+    appBtn.textContent = linkedinView === "applied"
+      ? `Back to fresh (${linkedinCurrent.length})`
+      : `Applied (${linkedinApplied.length})`;
+    appBtn.setAttribute("aria-pressed", linkedinView === "applied" ? "true" : "false");
+  }
+  if (heading) {
+    heading.textContent =
+      linkedinView === "archive" ? "LinkedIn Archive · previously surfaced roles"
+      : linkedinView === "applied" ? "LinkedIn Applied · roles marked as applied"
+      : "Fresh LinkedIn roles from the latest sweep";
+  }
+
+  const source =
+    linkedinView === "archive" ? linkedinArchive
+    : linkedinView === "applied" ? linkedinApplied
+    : linkedinCurrent;
+
+  if (!source.length) {
+    if (!linkedinMeta.loaded) {
+      status.textContent = "LinkedIn watcher store not reachable yet.";
+    } else if (linkedinView === "archive") {
+      status.textContent = "Archive is empty — older LinkedIn sweeps will collect here.";
+    } else if (linkedinView === "applied") {
+      status.textContent = "No LinkedIn roles marked as applied yet. Click Applied on a card after you apply.";
+    } else {
+      status.textContent = "No fresh LinkedIn matches yet. JSearch returns fewer LinkedIn-indexed roles than Indeed — try again after the next sweep (8 AM / 1 PM / 6 PM ET).";
+    }
+    return;
+  }
+
+  const filtered = linkedinFilter(source);
+  const swept = linkedinMeta.lastSweep ? ` · last sweep ${timeAgo(linkedinMeta.lastSweep)}` : "";
+  const label =
+    linkedinView === "archive" ? "archived role"
+    : linkedinView === "applied" ? "applied role"
+    : "fresh match";
+  status.textContent = `Showing ${filtered.length} of ${source.length} ${label}${source.length === 1 ? "" : "s"}${swept}.`;
+  filtered.forEach((m) => list.appendChild(linkedinCard(m)));
+}
+
+function renderLinkedin(data) {
+  linkedinCurrent = (data && data.current) || [];
+  linkedinArchive = (data && data.archive) || [];
+  linkedinApplied = (data && data.applied) || [];
+  linkedinMeta = { loaded: !!data, lastSweep: data && data.lastSweep };
+  linkedinView = "fresh";
+  paintLinkedin();
+}
+
+async function loadLinkedin(force) {
+  if (linkedinLoaded && !force) return;
+  const status = document.querySelector("#linkedinStatus");
+  if (status) status.textContent = "Loading latest LinkedIn matches…";
+  const token = syncToken();
+  for (const endpoint of LINKEDIN_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, { headers: { "x-jobpulse-pass": token } });
+      if (!res.ok) continue;
+      const { data } = await res.json();
+      linkedinLoaded = true;
+      renderLinkedin(data);
+      return;
+    } catch (_) { /* try next endpoint */ }
+  }
+  renderLinkedin(null);
+}
+
+async function linkedinMarkApplied(match, apply) {
+  const action = apply ? "markApplied" : "unmarkApplied";
+  const key = ["company", "role", "location"]
+    .map((k) => String((match && match[k]) || "").trim().toLowerCase())
+    .join("|");
+
+  if (apply) {
+    const existing =
+      linkedinCurrent.find((m) => sameKey(m, key)) ||
+      linkedinArchive.find((m) => sameKey(m, key)) ||
+      match;
+    const stamped = { ...existing, appliedAt: new Date().toISOString() };
+    linkedinCurrent = linkedinCurrent.filter((m) => !sameKey(m, key));
+    linkedinArchive = linkedinArchive.filter((m) => !sameKey(m, key));
+    linkedinApplied = [stamped, ...linkedinApplied.filter((m) => !sameKey(m, key))];
+  } else {
+    const found = linkedinApplied.find((m) => sameKey(m, key));
+    linkedinApplied = linkedinApplied.filter((m) => !sameKey(m, key));
+    if (found) {
+      const { appliedAt, ...rest } = found;
+      linkedinArchive = [rest, ...linkedinArchive.filter((m) => !sameKey(m, key))];
+    }
+  }
+  paintLinkedin();
+
+  const token = syncToken();
+  const payload = JSON.stringify({
+    action,
+    match: { company: match.company, role: match.role, location: match.location },
+  });
+  for (const endpoint of LINKEDIN_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-jobpulse-pass": token },
+        body: payload,
+      });
+      if (res.ok) return;
+    } catch (_) { /* try next */ }
+  }
+  loadLinkedin(true);
+}
+
+// Lazy-load the LinkedIn feed on first nav click — mirrors the Watcher pattern.
+elements.navItems.forEach((item) => {
+  if (item.dataset.view === "linkedin") {
+    item.addEventListener("click", () => { if (!linkedinLoaded) loadLinkedin(); });
+  }
+});
+
+const refreshLinkedinBtn = document.querySelector("#refreshLinkedinBtn");
+if (refreshLinkedinBtn) refreshLinkedinBtn.addEventListener("click", () => loadLinkedin(true));
+
+const archiveLinkedinBtn = document.querySelector("#archiveLinkedinBtn");
+if (archiveLinkedinBtn) {
+  archiveLinkedinBtn.addEventListener("click", () => {
+    linkedinView = linkedinView === "archive" ? "fresh" : "archive";
+    paintLinkedin();
+  });
+}
+
+const appliedLinkedinBtn = document.querySelector("#appliedLinkedinBtn");
+if (appliedLinkedinBtn) {
+  appliedLinkedinBtn.addEventListener("click", () => {
+    linkedinView = linkedinView === "applied" ? "fresh" : "applied";
+    paintLinkedin();
+  });
+}
+
+["input", "change"].forEach((eventName) => {
+  ["#linkedinSearch", "#linkedinRole", "#linkedinMode"].forEach((sel) => {
+    const field = document.querySelector(sel);
+    if (field) field.addEventListener(eventName, paintLinkedin);
+  });
+});

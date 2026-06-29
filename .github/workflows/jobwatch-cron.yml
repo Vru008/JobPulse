@@ -23,7 +23,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Hit /api/cron-watcher
+      - name: Hit /api/cron-watcher (Indeed)
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
@@ -34,6 +34,17 @@ jobs:
           response=$(curl -sS -o /tmp/body.txt -w "%{http_code}" \
             -X POST "https://job-pulse-plum.vercel.app/api/cron-watcher" \
             -H "x-cron-secret: $CRON_SECRET")
-          echo "HTTP $response"
+          echo "Indeed HTTP $response"
           cat /tmp/body.txt
+          test "$response" = "200"
+
+      - name: Hit /api/cron-linkedin (LinkedIn via JSearch)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -sS -o /tmp/body-li.txt -w "%{http_code}" \
+            -X POST "https://job-pulse-plum.vercel.app/api/cron-linkedin" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "LinkedIn HTTP $response"
+          cat /tmp/body-li.txt
           test "$response" = "200"
