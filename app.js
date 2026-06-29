@@ -1,6 +1,8 @@
 const authConfig = {
   username: "admin",
-  passcodeHash: "9b30ac880d9dd2684f77afd4efed920c243ef214c4e0e23d7ce41a8d666561b6",
+  // SHA-256 of the login passcode. To change: in a terminal run
+  // `printf %s 'YOUR_NEW_PASSCODE' | sha256sum` and replace this value.
+  passcodeHash: "2a8610aefdd0028c6bf074dd18721c0ef8bc43241cc7a653d7aedf2036bdf6b3",
 };
 
 // Live feeds the dashboard aggregates (toggle on/off in the Sources tab).
@@ -640,7 +642,12 @@ elements.loginForm.addEventListener("submit", async (event) => {
   const passcodeHash = await sha256(passcode);
 
   if (username === authConfig.username && passcodeHash === authConfig.passcodeHash) {
-    sessionStorage.setItem("jobpulse-pass", passcode); // used as the sync auth token
+    // Decoupled sync token: regardless of which login passcode the user typed,
+    // server-side APIs (state, jobwatch, sync) keep using the unchanging Vercel
+    // env var SYNC_PASSCODE. Login passcode just unlocks the UI; sync token is
+    // a separate constant. To rotate it: change Vercel SYNC_PASSCODE env var
+    // AND this constant together, then redeploy.
+    sessionStorage.setItem("jobpulse-pass", "JobPulse2026!");
     unlockApp();
     return;
   }
