@@ -67,6 +67,7 @@
         <nav aria-label="Primary navigation">
           <button class="nav-item active" data-view="dashboard">Dashboard (USA)</button>
           <button class="nav-item" data-view="watcher">Indeed Watcher</button>
+          <button class="nav-item" data-view="linkedin">LinkedIn Watcher</button>
           <button class="nav-item" data-view="ask">Ask Assistant</button>
           <button class="nav-item" data-view="global">Global Visa</button>
           <button class="nav-item" data-view="resume">Resume &amp; Cover</button>
@@ -286,6 +287,55 @@
             <button id="exportExcel" class="primary-btn" type="button">Export Excel tracker</button>
           </div>
           <div id="trackerList" class="tracker-list"></div>
+        </section>
+
+        <section id="linkedin" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">LinkedIn job-watcher · 3&times;/day</p>
+              <h2 id="linkedinHeading">Fresh LinkedIn roles from the latest sweep</h2>
+            </div>
+            <div class="topbar-actions">
+              <button id="refreshLinkedinBtn" class="primary-btn" type="button">Refresh</button>
+              <button id="archiveLinkedinBtn" class="ghost-btn" type="button" aria-pressed="false">Archive (0)</button>
+              <button id="appliedLinkedinBtn" class="ghost-btn" type="button" aria-pressed="false">Applied (0)</button>
+            </div>
+          </div>
+          <p class="resume-note">
+            LinkedIn-published roles surfaced via JSearch (Google for Jobs) on the
+            same 8&nbsp;AM / 1&nbsp;PM / 6&nbsp;PM&nbsp;ET cron as Indeed. LinkedIn has
+            no public job API, so this is the subset Google indexes — not 100% of
+            LinkedIn, but real and link-clickable.
+          </p>
+          <p id="linkedinStatus" class="resume-note" aria-live="polite">Loading latest matches&hellip;</p>
+
+          <div class="controls">
+            <label>
+              Search
+              <input id="linkedinSearch" type="search" placeholder="role, company, location" />
+            </label>
+            <label>
+              Role
+              <select id="linkedinRole">
+                <option value="all">All roles</option>
+                <option value="frontend">Frontend</option>
+                <option value="fullstack">Full Stack</option>
+                <option value="react">React</option>
+                <option value="ui">UI / UX</option>
+                <option value="web">Web</option>
+              </select>
+            </label>
+            <label>
+              Work mode
+              <select id="linkedinMode">
+                <option value="all">Any</option>
+                <option value="remote">Remote</option>
+                <option value="onsite">On-site</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="linkedinList" class="job-list" aria-live="polite"></div>
         </section>
 
         <section id="ask" class="view">
