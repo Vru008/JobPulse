@@ -14,8 +14,20 @@
 const { fetchJobs } = require("../lib/jobs-core");
 const { setWatch, getWatch } = require("../lib/linkedinwatch-core");
 
+function getDailyQuery() {
+  const rotations = [
+    "Frontend Developer, React Developer, JavaScript Developer, Web Developer, UI Developer, Software Engineer",
+    "React Developer, Frontend Engineer, Full Stack Developer, UI Developer, Web Developer, Software Engineer",
+    "Full Stack Developer, Software Engineer, Web Developer, JavaScript Developer, Frontend Developer, UI Engineer",
+    "Junior Software Engineer, Associate Software Engineer, Frontend Developer, React Developer, Web Developer",
+    "UI Developer, UX Engineer, Frontend Engineer, React Developer, Web Developer, Software Engineer",
+    "Web Developer, Frontend Developer, JavaScript Developer, React Developer, Full Stack Developer, Software Engineer",
+    "Software Engineer, Software Developer, Frontend Engineer, Full Stack Developer, React Developer, UI Developer",
+  ];
+  return rotations[new Date().getUTCDay()];
+}
+
 const PROFILE = {
-  q: "Frontend Developer, React Developer, Full Stack Developer, UI Developer, Web Developer, Software Engineer",
   skills: "React, JavaScript, TypeScript, HTML, CSS, Bootstrap, Node.js, REST APIs, Axios, Git",
   scope: "us",
   experience: "Junior to mid level",
@@ -96,7 +108,7 @@ module.exports = async function handler(req, res) {
     // only:"jsearch" tells fetchJobs to skip Greenhouse/Lever/Ashby/etc. and
     // call JSearch alone — that's where LinkedIn-published roles live.
     const seed = new Date().toISOString().slice(0, 10);
-    const feed = await fetchJobs({ ...PROFILE, seed, limit: 50, only: "jsearch" });
+    const feed = await fetchJobs({ ...PROFILE, q: getDailyQuery(), seed, limit: 120, only: "jsearch" });
     const candidates = (feed && feed.jobs) || [];
 
     const fresh = [];

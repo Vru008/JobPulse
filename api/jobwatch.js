@@ -3,7 +3,7 @@
  * POST { matches:[...], lastSweep?, mode? } -> { ok:true, count }
  * Auth: header x-jobpulse-pass must equal env SYNC_PASSCODE.
  */
-const { getWatch, setWatch, markApplied, unmarkApplied } = require("../lib/jobwatch-core");
+const { getWatch, setWatch, markApplied, unmarkApplied, clearArchive } = require("../lib/jobwatch-core");
 
 module.exports = async function handler(req, res) {
   const token = req.headers["x-jobpulse-pass"] || "";
@@ -20,6 +20,8 @@ module.exports = async function handler(req, res) {
         result = await markApplied(token, body.match);
       } else if (body.action === "unmarkApplied") {
         result = await unmarkApplied(token, body.match);
+      } else if (body.action === "clearArchive") {
+        result = await clearArchive(token);
       } else {
         result = await setWatch(token, body);
       }

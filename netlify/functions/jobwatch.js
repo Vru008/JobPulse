@@ -1,5 +1,5 @@
 /* Netlify Functions handler — GET/POST /.netlify/functions/jobwatch */
-const { getWatch, setWatch, markApplied, unmarkApplied } = require("../../lib/jobwatch-core");
+const { getWatch, setWatch, markApplied, unmarkApplied, clearArchive } = require("../../lib/jobwatch-core");
 
 exports.handler = async (event) => {
   const token = (event.headers && (event.headers["x-jobpulse-pass"] || event.headers["X-Jobpulse-Pass"])) || "";
@@ -13,6 +13,7 @@ exports.handler = async (event) => {
       let result;
       if (body.action === "markApplied") result = await markApplied(token, body.match);
       else if (body.action === "unmarkApplied") result = await unmarkApplied(token, body.match);
+      else if (body.action === "clearArchive") result = await clearArchive(token);
       else result = await setWatch(token, body);
       return { statusCode: 200, headers: { "Content-Type": "application/json" }, body: JSON.stringify(result) };
     }
