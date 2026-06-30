@@ -1527,3 +1527,206 @@ if (appliedLinkedinBtn) {
     if (field) field.addEventListener(eventName, paintLinkedin);
   });
 });
+
+/* ---------- India Markets tab ---------- */
+
+let marketsLoaded = false;
+
+function indianNumber(n) {
+  // Format with Indian comma style (lakh/crore grouping): 1,23,456.78
+  if (n == null || !isFinite(n)) return "—";
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(Number(n));
+  const fixed = abs.toFixed(2);
+  const [intPart, decPart] = fixed.split(".");
+  let result;
+  if (intPart.length <= 3) {
+    result = intPart;
+  } else {
+    const last3 = intPart.slice(-3);
+    const rest = intPart.slice(0, -3);
+    result = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3;
+  }
+  return sign + result + "." + decPart;
+}
+
+function indexCard(idx) {
+  const up = idx.pct >= 0;
+  const arrow = up ? "▲" : "▼";
+  const cls = up ? "up" : "down";
+  return `
+    <article class="index-card ${cls}">
+      <header>
+        <strong>${idx.name}</strong>
+        <span class="badge">${idx.marketState || "NSE"}</span>
+      </header>
+      <div class="index-price">${indianNumber(idx.price)}</div>
+      <div class="index-change">
+        <span>${arrow} ${indianNumber(Math.abs(idx.change))}</span>
+        <span>(${idx.pct >= 0 ? "+" : ""}${idx.pct.toFixed(2)}%)</span>
+      </div>
+    </article>`;
+}
+
+function moverRow(m) {
+  const up = m.pct >= 0;
+  const cls = up ? "up" : "down";
+  const arrow = up ? "▲" : "▼";
+  return `
+    <div class="mover-row ${cls}">
+      <div>
+        <strong>${m.name}</strong>
+        <span class="meta">${m.symbol.replace(".NS", "").replace(".BO", "")}</span>
+      </div>
+      <div class="mover-right">
+        <span class="mover-price">₹${indianNumber(m.price)}</span>
+        <span class="mover-pct">${arrow} ${m.pct >= 0 ? "+" : ""}${m.pct.toFixed(2)}%</span>
+      </div>
+    </div>`;
+}
+
+function newsItem(n) {
+  const date = n.date ? ` <span class="meta">· ${new Date(n.date).toLocaleString([], { hour: "2-digit", minute: "2-digit", weekday: "short" })}</span>` : "";
+  return `
+    <li>
+      <a href="${n.link}" target="_blank" rel="noreferrer">${n.title}</a>
+      <span class="meta">${n.source || ""}${date}</span>
+    </li>`;
+}
+
+function renderMarkets(data) {
+  const indicesEl = document.querySelector("#indicesRow");
+  const gEl = document.querySelector("#moversGainers");
+  const lEl = document.querySelector("#moversLosers");
+  const newsEl = document.querySelector("#marketsNews");
+  const updEl = document.querySelector("#marketsUpdated");
+  if (!indicesEl) return;
+
+  if (data.indices && data.indices.length) {
+    indicesEl.innerHTML = data.indices.map(indexCard).join("");
+  } else {
+    indicesEl.innerHTML = `<p class="resume-note">Couldn't reach Yahoo Finance just now — try Refresh.</p>`;
+  }
+  gEl.innerHTML = (data.gainers || []).map(moverRow).join("") || `<p class="resume-note">No data.</p>`;
+  lEl.innerHTML = (data.losers || []).map(moverRow).join("") || `<p class="resume-note">No data.</p>`;
+  newsEl.innerHTML = (data.news || []).map(newsItem).join("") || `<li class="resume-note">No headlines fetched.</li>`;
+
+  if (data.fetchedAt) {
+    const t = new Date(data.fetchedAt);
+    updEl.textContent = `Updated ${t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${data.cached ? " · cached" : ""}`;
+  }
+}
+
+async function loadMarkets(force) {
+  const status = document.querySelector("#marketsUpdated");
+  if (status) status.textContent = force ? "Refreshing…" : "Loading…";
+  try {
+    const res = await fetch(`/api/india-markets${force ? "?force=1" : ""}`);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    marketsLoaded = true;
+    renderMarkets(data);
+  } catch (err) {
+    if (status) status.textContent = "Failed to load — try Refresh.";
+    console.error("[markets] load failed:", err);
+  }
+}
+
+elements.navItems.forEach((item) => {
+  if (item.dataset.view === "markets") {
+    item.addEventListener("click", () => { if (!marketsLoaded) loadMarkets(); });
+  }
+});
+const refreshMarketsBtn = document.querySelector("#refreshMarketsBtn");
+if (refreshMarketsBtn) refreshMarketsBtn.addEventListener("click", () => loadMarkets(true));
+
+/* ---------- Daily Brief tab ---------- */
+
+let briefLoaded = false;
+
+function briefCard(title, body) {
+  return `
+    <article class="brief-card">
+      <header><h3>${title}</h3></header>
+      <div class="brief-body">${body}</div>
+    </article>`;
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function renderBrief(d) {
+  const root = document.querySelector("#briefCards");
+  const dateEl = document.querySelector("#briefDate");
+  if (!root) return;
+
+  const items = [];
+
+  if (d.startup_idea) {
+    const s = d.startup_idea;
+    items.push(briefCard(`💡 Startup idea — ${escapeHtml(s.title || "")}`, `
+      <p><strong>Problem:</strong> ${escapeHtml(s.problem || "")}</p>
+      <p><strong>User:</strong> ${escapeHtml(s.target_user || s.user || "")}</p>
+      <p><strong>Why now:</strong> ${escapeHtml(s.why_now || "")}</p>
+      <p><strong>MVP:</strong> ${escapeHtml(s.mvp || "")}</p>
+    `));
+  }
+  if (d.frontend_change) {
+    const f = d.frontend_change;
+    items.push(briefCard(`🛠 Frontend / React — ${escapeHtml(f.title || "")}`, `
+      <p><strong>What:</strong> ${escapeHtml(f.what || "")}</p>
+      <p><strong>Why it matters:</strong> ${escapeHtml(f.why_it_matters || "")}</p>
+      ${f.source_hint ? `<p class="meta">Source: ${escapeHtml(f.source_hint)}</p>` : ""}
+    `));
+  }
+  if (d.read_of_day) {
+    const r = d.read_of_day;
+    items.push(briefCard(`📖 Read of the day — ${escapeHtml(r.title || "")}`, `
+      <p>${escapeHtml(r.summary || "")}</p>
+      <p class="meta">Topic: ${escapeHtml(r.topic || "")} · ~${escapeHtml(r.approx_time_min || "?")} min read</p>
+    `));
+  }
+  if (d.quote) {
+    const q = d.quote;
+    items.push(briefCard(`❝ Quote`, `
+      <blockquote>${escapeHtml(q.quote || "")}</blockquote>
+      <p class="meta">— ${escapeHtml(q.author || "Unknown")}${q.context ? ` · ${escapeHtml(q.context)}` : ""}</p>
+    `));
+  }
+  if (d.life_lesson) {
+    const l = d.life_lesson;
+    items.push(briefCard(`🌱 Life lesson — ${escapeHtml(l.lesson || "")}`, `
+      <p>${escapeHtml(l.reasoning || "")}</p>
+      ${l.applies_to ? `<p class="meta">Applies to: ${escapeHtml(l.applies_to)}</p>` : ""}
+    `));
+  }
+
+  root.innerHTML = items.join("") || `<p class="resume-note">Brief is empty — try Refresh.</p>`;
+  if (dateEl) dateEl.textContent = d.date ? `For ${d.date}${d.cached ? " · cached" : ""}` : "";
+}
+
+async function loadBrief(force) {
+  const root = document.querySelector("#briefCards");
+  if (root && !root.children.length) root.innerHTML = `<p class="resume-note">Loading today's brief…</p>`;
+  try {
+    const res = await fetch(`/api/daily-brief${force ? "?force=1" : ""}`);
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    briefLoaded = true;
+    renderBrief(data);
+  } catch (err) {
+    if (root) root.innerHTML = `<p class="resume-note">Couldn't generate today's brief. ${escapeHtml(err.message || "")}</p>`;
+    console.error("[brief] load failed:", err);
+  }
+}
+
+elements.navItems.forEach((item) => {
+  if (item.dataset.view === "brief") {
+    item.addEventListener("click", () => { if (!briefLoaded) loadBrief(); });
+  }
+});
+const refreshBriefBtn = document.querySelector("#refreshBriefBtn");
+if (refreshBriefBtn) refreshBriefBtn.addEventListener("click", () => loadBrief(true));
