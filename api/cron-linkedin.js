@@ -30,9 +30,14 @@ function getDailyQuery() {
 const PROFILE = {
   skills: "React, JavaScript, TypeScript, HTML, CSS, Bootstrap, Node.js, REST APIs, Axios, Git",
   scope: "us",
-  experience: "Junior to mid level",
+  experience: "Entry to mid level",
   sponsorship: "On F-1 OPT (authorized now), needs future H-1B sponsorship",
 };
+
+function isSenior(title) {
+  const t = String(title || "").toLowerCase();
+  return /\b(senior|sr\.?|staff|principal|lead|architect|manager|head of|director|vp\b|iv\b|level (4|5|6))\b/.test(t);
+}
 
 function keyOf(m) {
   return ["company", "role", "location"]
@@ -102,8 +107,14 @@ module.exports = async function handler(req, res) {
   if (!syncToken) return res.status(500).send("SYNC_PASSCODE not set on the server.");
 
   try {
+    // Dedupe against current+applied only (skipped-archived roles can resurface).
     const watchData = await getWatch(syncToken);
-    const seen = new Set((watchData && watchData.seenKeys) || []);
+    const seen = new Set([
+      ...((watchData && watchData.current) || []),
+      ...((watchData && watchData.applied) || []),
+    ].map((m) => ["company", "role", "location"]
+      .map((k) => String((m && m[k]) || "").trim().toLowerCase())
+      .join("|")));
 
     // only:"jsearch" tells fetchJobs to skip Greenhouse/Lever/Ashby/etc. and
     // call JSearch alone — that's where LinkedIn-published roles live.
@@ -127,6 +138,7 @@ module.exports = async function handler(req, res) {
         note: draftNote(job),
       };
       if (!match.url || !match.company || !match.role) continue;
+      if (isSenior(match.role)) continue;
       if (!isUsLocation(match.location)) continue;
       const k = keyOf(match);
       if (seen.has(k) || usedKeys.has(k)) continue;

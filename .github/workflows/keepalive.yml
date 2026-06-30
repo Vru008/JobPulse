@@ -1,0 +1,35 @@
+name: Keepalive (prevent scheduled-workflow auto-pause)
+
+# GitHub auto-disables scheduled workflows on private repos after ~60 days
+# of zero repo activity. This workflow does a single timestamp-bump commit
+# every Sunday so the activity clock never resets to zero, keeping the
+# Indeed/LinkedIn cron firing reliably.
+
+on:
+  schedule:
+    - cron: "0 6 * * 0"   # Sundays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Touch keepalive file
+        run: |
+          mkdir -p .github
+          date -u "+keepalive: %Y-%m-%dT%H:%M:%SZ" > .github/.keepalive
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "no change"
+            exit 0
+          fi
+          git add .github/.keepalive
+          git commit -m "chore: keepalive ping"
+          git push
