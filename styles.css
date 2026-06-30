@@ -912,3 +912,140 @@ textarea {
   border: 1px solid rgba(20, 108, 95, 0.45);
   color: var(--accent);
 }
+
+/* ============ India Markets ============ */
+.indices-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.index-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(24,33,38,0.04), 0 12px 32px rgba(24,33,38,0.06);
+}
+.index-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+.index-card .badge {
+  font-size: 0.7rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e8f0f4;
+  color: var(--accent-3);
+  font-weight: 800;
+}
+.index-price {
+  font-size: 2.1rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.index-change {
+  margin-top: 6px;
+  display: flex;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.index-card.up .index-change,
+.mover-row.up .mover-pct { color: #15803d; }
+.index-card.down .index-change,
+.mover-row.down .mover-pct { color: #b91c1c; }
+
+.movers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+@media (max-width: 720px) { .movers-grid { grid-template-columns: 1fr; } }
+.movers-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(24,33,38,0.04), 0 12px 32px rgba(24,33,38,0.06);
+}
+.movers-card h3 { margin-bottom: 14px; font-size: 1.05rem; }
+.movers-gainers h3 { color: #15803d; }
+.movers-losers h3 { color: #b91c1c; }
+.mover-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.mover-row:last-child { border-bottom: 0; }
+.mover-row strong { display: block; }
+.mover-row .meta { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+.mover-right { text-align: right; }
+.mover-price { display: block; font-weight: 700; font-size: 0.95rem; }
+.mover-pct { font-weight: 800; font-size: 0.85rem; }
+
+.news-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(24,33,38,0.04), 0 12px 32px rgba(24,33,38,0.06);
+}
+.news-card h3 { margin-bottom: 12px; font-size: 1.05rem; }
+.news-list { list-style: decimal inside; margin: 0; padding-left: 0; }
+.news-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.55;
+}
+.news-list li:last-child { border-bottom: 0; }
+.news-list a { color: var(--accent-3); font-weight: 700; text-decoration: none; }
+.news-list a:hover { text-decoration: underline; }
+.news-list .meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ============ Daily Brief ============ */
+.brief-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 14px;
+}
+.brief-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 18px;
+  box-shadow: 0 1px 2px rgba(24,33,38,0.04), 0 12px 32px rgba(24,33,38,0.06);
+}
+.brief-card h3 {
+  font-size: 1.0rem;
+  margin-bottom: 12px;
+  line-height: 1.35;
+}
+.brief-body p { margin: 0 0 10px; line-height: 1.55; font-size: 0.95rem; }
+.brief-body strong { color: var(--accent-3); }
+.brief-body .meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+.brief-body blockquote {
+  margin: 0 0 8px;
+  padding-left: 12px;
+  border-left: 3px solid var(--accent);
+  font-style: italic;
+  font-size: 1.0rem;
+  line-height: 1.55;
+}

@@ -67,6 +67,8 @@
         <nav aria-label="Primary navigation">
           <button class="nav-item active" data-view="watcher">Indeed Watcher</button>
           <button class="nav-item" data-view="linkedin">LinkedIn Watcher</button>
+          <button class="nav-item" data-view="markets">India Markets</button>
+          <button class="nav-item" data-view="brief">Daily Brief</button>
           <button class="nav-item" data-view="ask">Ask Assistant</button>
           <button class="nav-item" data-view="resume">Resume &amp; Cover</button>
           <button class="nav-item" data-view="profile">Profile</button>
@@ -332,6 +334,61 @@
           </div>
 
           <div id="linkedinList" class="job-list" aria-live="polite"></div>
+        </section>
+
+        <section id="markets" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">India markets &middot; live (NSE / BSE)</p>
+              <h2>NIFTY, SENSEX &amp; top movers</h2>
+            </div>
+            <div class="topbar-actions">
+              <span id="marketsUpdated" class="resume-note" style="margin:0; font-size:0.85rem;">—</span>
+              <button id="refreshMarketsBtn" class="primary-btn" type="button">Refresh</button>
+            </div>
+          </div>
+          <p class="resume-note">
+            Real Yahoo Finance prices (no AI-generated numbers, ever). Movers
+            ranked from the top-15 NIFTY constituents by weight. News pulled
+            from Moneycontrol + Economic Times RSS. Cached 5&nbsp;min.
+          </p>
+
+          <div id="indicesRow" class="indices-row" aria-live="polite"></div>
+
+          <div class="movers-grid">
+            <article class="movers-card movers-gainers">
+              <h3>Top gainers</h3>
+              <div id="moversGainers" aria-live="polite"></div>
+            </article>
+            <article class="movers-card movers-losers">
+              <h3>Top losers</h3>
+              <div id="moversLosers" aria-live="polite"></div>
+            </article>
+          </div>
+
+          <article class="news-card">
+            <h3>Today&rsquo;s top market headlines</h3>
+            <ol id="marketsNews" class="news-list" aria-live="polite"></ol>
+          </article>
+        </section>
+
+        <section id="brief" class="view">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Daily brief &middot; one curated set per day</p>
+              <h2>Today&rsquo;s 5 cards</h2>
+            </div>
+            <div class="topbar-actions">
+              <span id="briefDate" class="resume-note" style="margin:0; font-size:0.85rem;">—</span>
+              <button id="refreshBriefBtn" class="primary-btn" type="button">Refresh</button>
+            </div>
+          </div>
+          <p class="resume-note">
+            One Gemini batch call per day, cached for 24h. Five categories:
+            India startup idea (rotates theme by day), frontend/React change,
+            read-of-the-day, real quote, life lesson.
+          </p>
+          <div id="briefCards" class="brief-grid" aria-live="polite"></div>
         </section>
 
         <section id="ask" class="view">
