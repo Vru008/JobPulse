@@ -647,21 +647,34 @@ elements.loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   elements.loginError.textContent = "";
 
+  // Always trim — autofill from password managers frequently leaves a trailing
+  // space / hidden U+200B-class character that breaks an exact string compare.
   const username = elements.loginUser.value.trim();
-  const passcode = elements.loginPasscode.value;
+  const passcode = elements.loginPasscode.value.trim();
   const passcodeHash = await sha256(passcode);
 
+  // Console breadcrumbs (visible to the user) so login failures are diagnosable
+  // without the developer having to be present.
+  console.log("[jp-login] submit fired",
+    { username, passcodeLength: passcode.length, hashMatches: passcodeHash === authConfig.passcodeHash, userMatches: username === authConfig.username });
+
   if (username === authConfig.username && passcodeHash === authConfig.passcodeHash) {
-    // Decoupled sync token: regardless of which login passcode the user typed,
-    // server-side APIs (state, jobwatch, sync) keep using the unchanging Vercel
-    // env var SYNC_PASSCODE. Login passcode just unlocks the UI; sync token is
-    // a separate constant. To rotate it: change Vercel SYNC_PASSCODE env var
-    // AND this constant together, then redeploy.
+    // Lock-in the authenticated state BEFORE doing any optional rendering, so a
+    // later non-critical failure (e.g. a render call) can't roll the login back.
+    sessionStorage.setItem("jobpulse-authenticated", "true");
     sessionStorage.setItem("jobpulse-pass", "JobPulse2026!");
-    unlockApp();
+    document.body.classList.add("authenticated");
+    try {
+      unlockApp();
+    } catch (err) {
+      // Logged but swallowed — the user is already in, optional UI can recover
+      // on the next interaction or page refresh.
+      console.error("[jp-login] unlockApp post-auth render error (login still succeeded):", err);
+    }
     return;
   }
 
+  console.warn("[jp-login] rejected", { userMatches: username === authConfig.username, hashMatches: passcodeHash === authConfig.passcodeHash });
   elements.loginError.textContent = "That username or passcode is not correct.";
   elements.loginPasscode.value = "";
   elements.loginPasscode.focus();
