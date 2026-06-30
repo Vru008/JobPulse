@@ -36,12 +36,22 @@ function getDailyQuery() {
   return rotations[new Date().getUTCDay()];
 }
 
+// Loosened from the strict "Junior to mid level" — fetchJobs was returning
+// only ~24 qualifying candidates which became 0 fresh after dedupe. Letting
+// the aggregator return a wider band (entry through mid) ~triples the pool.
+// The cron still filters senior-and-up via title keywords below.
 const PROFILE = {
   skills: "React, JavaScript, TypeScript, HTML, CSS, Bootstrap, Node.js, REST APIs, Axios, Git",
   scope: "us",
-  experience: "Junior to mid level",
+  experience: "Entry to mid level",
   sponsorship: "On F-1 OPT (authorized now), needs future H-1B sponsorship",
 };
+
+// Hard-skip clearly senior roles by title.
+function isSenior(title) {
+  const t = String(title || "").toLowerCase();
+  return /\b(senior|sr\.?|staff|principal|lead|architect|manager|head of|director|vp\b|iv\b|level (4|5|6))\b/.test(t);
+}
 
 function keyOf(m) {
   return ["company", "role", "location"]
@@ -111,9 +121,18 @@ module.exports = async function handler(req, res) {
   if (!syncToken) return res.status(500).send("SYNC_PASSCODE not set on the server.");
 
   try {
-    // 1. seenKeys from the store
+    // 1. Build dedupe set — block only current + applied. Archive is allowed
+    //    to resurface because with such a small qualifying-role pool, blocking
+    //    skipped-and-archived roles forever guarantees 0 fresh after a few
+    //    sweeps. The user can still see "this was archived" via the Archive
+    //    tab and skip it again in 2 seconds.
     const watchData = await getWatch(syncToken);
-    const seen = new Set((watchData && watchData.seenKeys) || []);
+    const seen = new Set([
+      ...((watchData && watchData.current) || []),
+      ...((watchData && watchData.applied) || []),
+    ].map((m) => ["company", "role", "location"]
+      .map((k) => String((m && m[k]) || "").trim().toLowerCase())
+      .join("|")));
 
     // 2. aggregator — broader pool + daily-rotated query so dedupe has more
     //    raw material when the user has marked many applied/archived.
@@ -137,6 +156,7 @@ module.exports = async function handler(req, res) {
         note: draftNote(job),
       };
       if (!match.url || !match.company || !match.role) continue;
+      if (isSenior(match.role)) continue;
       if (!isUsLocation(match.location)) continue;
       const k = keyOf(match);
       if (seen.has(k) || usedKeys.has(k)) continue;
