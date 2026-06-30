@@ -37,6 +37,20 @@ let loadingGlobal = false;
 let globalLoaded = false;
 let lastJobDay = ""; // tracks the current "8 AM batch" for auto-refresh
 
+// HOISTED watcher-state declarations.
+//
+// setActiveView() is invoked at module-load time by initialiseViewFromHash() and
+// reads `watcherLoaded` to decide whether to fire loadWatcher(). The original
+// `let watcherLoaded = false;` lived ~128 lines later, which put it in the
+// Temporal Dead Zone at the moment setActiveView ran — every fresh page load
+// threw `ReferenceError: Cannot access 'watcherLoaded' before initialization`
+// and halted the rest of app.js (including the login form handler). That's
+// why login appeared to do nothing.
+// Same hazard exists for the linkedin tab if the lazy-load is ever called
+// during boot, so it's predeclared too.
+let watcherLoaded = false;
+let linkedinLoaded = false;
+
 // A new batch of roles each morning at 8 AM local time. Before 8 AM we still
 // show yesterday's batch; at/after 8 AM the seed flips, so the feed refreshes.
 function jobDaySeed() {
@@ -691,7 +705,10 @@ if (isAuthenticated()) {
 /* ---------- Indeed Watcher tab (results from the scheduled agent via /api/jobwatch) ---------- */
 
 const WATCH_ENDPOINTS = ["/api/jobwatch", "/.netlify/functions/jobwatch"];
-let watcherLoaded = false;
+// `watcherLoaded` is now hoisted to the top of the file (see the comment near
+// `let globalLoaded`). Reassignment only — re-declaring with `let` would be a
+// SyntaxError.
+watcherLoaded = false;
 
 function timeAgo(iso) {
   if (!iso) return "";
@@ -1217,7 +1234,9 @@ if (clearChatBtn) {
 /* ---------- LinkedIn Watcher (parallel to Indeed Watcher) ---------- */
 
 const LINKEDIN_ENDPOINTS = ["/api/linkedinwatch", "/.netlify/functions/linkedinwatch"];
-let linkedinLoaded = false;
+// `linkedinLoaded` is hoisted to the top of the file (see comment near
+// `let globalLoaded`). Reassignment only here.
+linkedinLoaded = false;
 let linkedinCurrent = [];
 let linkedinArchive = [];
 let linkedinApplied = [];
