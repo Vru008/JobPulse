@@ -20,9 +20,23 @@
 const { fetchJobs } = require("../lib/jobs-core");
 const { setWatch, getWatch } = require("../lib/jobwatch-core");
 
-// Vruttant's profile — drives keyword matching + exclusion in fetchJobs.
+// Rotate the FIRST keyword by day-of-week so JSearch (which only uses the
+// leading term) returns a different slice of Google-for-Jobs each day,
+// stretching the daily pool of fresh roles past the free-tier ceiling.
+function getDailyQuery() {
+  const rotations = [
+    "Frontend Developer, React Developer, JavaScript Developer, Web Developer, UI Developer, Software Engineer",      // Sun
+    "React Developer, Frontend Engineer, Full Stack Developer, UI Developer, Web Developer, Software Engineer",       // Mon
+    "Full Stack Developer, Software Engineer, Web Developer, JavaScript Developer, Frontend Developer, UI Engineer",  // Tue
+    "Junior Software Engineer, Associate Software Engineer, Frontend Developer, React Developer, Web Developer",      // Wed
+    "UI Developer, UX Engineer, Frontend Engineer, React Developer, Web Developer, Software Engineer",                // Thu
+    "Web Developer, Frontend Developer, JavaScript Developer, React Developer, Full Stack Developer, Software Engineer", // Fri
+    "Software Engineer, Software Developer, Frontend Engineer, Full Stack Developer, React Developer, UI Developer",  // Sat
+  ];
+  return rotations[new Date().getUTCDay()];
+}
+
 const PROFILE = {
-  q: "Frontend Developer, React Developer, Full Stack Developer, UI Developer, Web Developer, Software Engineer",
   skills: "React, JavaScript, TypeScript, HTML, CSS, Bootstrap, Node.js, REST APIs, Axios, Git",
   scope: "us",
   experience: "Junior to mid level",
@@ -101,9 +115,10 @@ module.exports = async function handler(req, res) {
     const watchData = await getWatch(syncToken);
     const seen = new Set((watchData && watchData.seenKeys) || []);
 
-    // 2. aggregator
-    const seed = new Date().toISOString().slice(0, 10); // daily seed for rotation
-    const feed = await fetchJobs({ ...PROFILE, seed, limit: 50 });
+    // 2. aggregator — broader pool + daily-rotated query so dedupe has more
+    //    raw material when the user has marked many applied/archived.
+    const seed = new Date().toISOString().slice(0, 10);
+    const feed = await fetchJobs({ ...PROFILE, q: getDailyQuery(), seed, limit: 120 });
     const candidates = (feed && feed.jobs) || [];
 
     // 3. dedupe + map to watcher shape

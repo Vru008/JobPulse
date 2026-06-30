@@ -1,7 +1,7 @@
 /* Vercel serverless function — GET/POST /api/linkedinwatch
  * Architectural twin of /api/jobwatch but bound to the LinkedIn collection.
  */
-const { getWatch, setWatch, markApplied, unmarkApplied } = require("../lib/linkedinwatch-core");
+const { getWatch, setWatch, markApplied, unmarkApplied, clearArchive } = require("../lib/linkedinwatch-core");
 
 module.exports = async function handler(req, res) {
   const token = req.headers["x-jobpulse-pass"] || "";
@@ -18,6 +18,8 @@ module.exports = async function handler(req, res) {
         result = await markApplied(token, body.match);
       } else if (body.action === "unmarkApplied") {
         result = await unmarkApplied(token, body.match);
+      } else if (body.action === "clearArchive") {
+        result = await clearArchive(token);
       } else {
         result = await setWatch(token, body);
       }
