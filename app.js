@@ -2027,3 +2027,32 @@ if (appliedGlassdoorBtn) {
     if (field) field.addEventListener(eventName, paintGlassdoor);
   });
 });
+
+/* ---------- Deep links to the real LinkedIn / Glassdoor search ---------- */
+// The JSearch-backed watchers are sparse, so give a one-click path to the full
+// results on the actual site (where the user is logged in), pre-filled from
+// their profile.
+function profileSearchKeywords() {
+  const titles = (state.profile.targetTitles || "Frontend Developer, React Developer")
+    .split(",").map((s) => s.trim()).filter(Boolean).slice(0, 3);
+  return titles.join(" ") || "Frontend Developer";
+}
+
+function openExternalJobSearch(kind) {
+  const kw = encodeURIComponent(profileSearchKeywords());
+  const loc = encodeURIComponent(state.profile.location || "United States");
+  let url;
+  if (kind === "linkedin") {
+    // f_E=2,3 → entry + associate; f_TPR=r86400 → posted in last 24h.
+    url = `https://www.linkedin.com/jobs/search/?keywords=${kw}&location=${loc}&f_E=2%2C3&f_TPR=r86400`;
+  } else {
+    url = `https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${kw}&fromAge=1`;
+  }
+  window.open(url, "_blank", "noopener");
+}
+
+const openLinkedinSearchBtn = document.querySelector("#openLinkedinSearch");
+if (openLinkedinSearchBtn) openLinkedinSearchBtn.addEventListener("click", () => openExternalJobSearch("linkedin"));
+
+const openGlassdoorSearchBtn = document.querySelector("#openGlassdoorSearch");
+if (openGlassdoorSearchBtn) openGlassdoorSearchBtn.addEventListener("click", () => openExternalJobSearch("glassdoor"));
