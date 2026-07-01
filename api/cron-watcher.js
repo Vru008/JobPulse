@@ -136,7 +136,9 @@ module.exports = async function handler(req, res) {
 
     // 2. aggregator — broader pool + daily-rotated query so dedupe has more
     //    raw material when the user has marked many applied/archived.
-    const seed = new Date().toISOString().slice(0, 10);
+    //    Hour-granular seed ("2026-07-01T12") so the 8am/1pm/6pm sweeps each
+    //    rotate to a different slice of the 300+ company boards.
+    const seed = new Date().toISOString().slice(0, 13);
     const feed = await fetchJobs({ ...PROFILE, q: getDailyQuery(), seed, limit: 120 });
     const candidates = (feed && feed.jobs) || [];
 
