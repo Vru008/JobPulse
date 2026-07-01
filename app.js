@@ -1730,3 +1730,300 @@ elements.navItems.forEach((item) => {
 });
 const refreshBriefBtn = document.querySelector("#refreshBriefBtn");
 if (refreshBriefBtn) refreshBriefBtn.addEventListener("click", () => loadBrief(true));
+
+/* ---------- Glassdoor Watcher (parallel to Indeed Watcher) ---------- */
+
+const GLASSDOOR_ENDPOINTS = ["/api/glassdoorwatch", "/.netlify/functions/glassdoorwatch"];
+// `glassdoorLoaded` is hoisted to the top of the file (see comment near
+// `let globalLoaded`). Reassignment only here.
+let glassdoorLoaded = false;
+let glassdoorCurrent = [];
+let glassdoorArchive = [];
+let glassdoorApplied = [];
+let glassdoorMeta = { loaded: false, lastSweep: null };
+let glassdoorView = "fresh"; // "fresh" | "archive" | "applied"
+
+function glassdoorFilter(matches) {
+  const q = (document.querySelector("#glassdoorSearch")?.value || "").trim().toLowerCase();
+  const role = document.querySelector("#glassdoorRole")?.value || "all";
+  const mode = document.querySelector("#glassdoorMode")?.value || "all";
+  return matches.filter((m) => {
+    if (q && !`${m.role} ${m.company} ${m.location}`.toLowerCase().includes(q)) return false;
+    if (role !== "all" && watchRoleCategory(m.role) !== role) return false;
+    if (mode !== "all") {
+      const remote = /remote/i.test(m.location || "");
+      if (mode === "remote" && !remote) return false;
+      if (mode === "onsite" && remote) return false;
+    }
+    return true;
+  });
+}
+
+// Card builder mirrors watcherCard with its own Mark-applied wiring so a bug
+// in the Indeed card cannot break Glassdoor.
+function glassdoorCard(match) {
+  const card = document.createElement("article");
+  card.className = "job-card";
+
+  const main = document.createElement("div");
+  main.className = "job-main";
+  const left = document.createElement("div");
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "job-title-row";
+  const h3 = document.createElement("h3");
+  if (match.url) {
+    const a = document.createElement("a");
+    a.href = match.url;
+    a.target = "_blank";
+    a.rel = "noreferrer";
+    a.textContent = match.role || "Role";
+    h3.appendChild(a);
+  } else {
+    h3.textContent = match.role || "Role";
+  }
+  titleRow.appendChild(h3);
+  if (match.fit) {
+    const band = document.createElement("span");
+    band.className = "fit-band";
+    band.textContent = match.fit;
+    titleRow.appendChild(band);
+  }
+  left.appendChild(titleRow);
+
+  const company = document.createElement("p");
+  company.className = "company";
+  company.textContent = match.company || "";
+  left.appendChild(company);
+
+  const meta = document.createElement("p");
+  meta.className = "meta";
+  meta.textContent = [match.location, match.postedOn ? `posted ${match.postedOn}` : "", timeAgo(match.firstSeen)]
+    .filter(Boolean)
+    .join(" · ");
+  left.appendChild(meta);
+
+  main.appendChild(left);
+  card.appendChild(main);
+
+  if (match.note) {
+    const details = document.createElement("details");
+    details.className = "watch-note";
+    const summary = document.createElement("summary");
+    summary.textContent = "Draft application note";
+    const p = document.createElement("p");
+    p.textContent = match.note;
+    details.appendChild(summary);
+    details.appendChild(p);
+    card.appendChild(details);
+  }
+
+  const actions = document.createElement("div");
+  actions.className = "job-actions";
+  if (match.url) {
+    const apply = document.createElement("a");
+    apply.className = "apply-link";
+    apply.href = match.url;
+    apply.target = "_blank";
+    apply.rel = "noreferrer";
+    apply.textContent = "Apply on Glassdoor";
+    actions.appendChild(apply);
+  }
+
+  const tailor = document.createElement("button");
+  tailor.className = "tailor-btn";
+  tailor.type = "button";
+  tailor.textContent = "Tailor résumé";
+  tailor.addEventListener("click", () => {
+    sessionStorage.setItem("jobpulse-tailor", JSON.stringify({
+      company: match.company,
+      title: match.role,
+      jobDesc: `${match.role} at ${match.company}\nLocation: ${match.location || ""}\n${match.fit || ""}\n\nApply: ${match.url || ""}`,
+    }));
+    document.querySelector('.nav-item[data-view="resume"]').click();
+  });
+  actions.appendChild(tailor);
+
+  if (match.note) {
+    const copy = document.createElement("button");
+    copy.className = "ghost-btn";
+    copy.type = "button";
+    copy.textContent = "Copy note";
+    copy.addEventListener("click", () => {
+      navigator.clipboard?.writeText(match.note);
+      copy.textContent = "Copied ✓";
+      setTimeout(() => (copy.textContent = "Copy note"), 1500);
+    });
+    actions.appendChild(copy);
+  }
+
+  const isApplied = glassdoorView === "applied";
+  const applyBtn = document.createElement("button");
+  applyBtn.className = "ghost-btn applied-btn" + (isApplied ? " is-applied" : "");
+  applyBtn.type = "button";
+  applyBtn.textContent = isApplied ? "Un-apply" : "Applied";
+  applyBtn.addEventListener("click", () => glassdoorMarkApplied(match, !isApplied));
+  actions.appendChild(applyBtn);
+
+  card.appendChild(actions);
+  return card;
+}
+
+function paintGlassdoor() {
+  const list = document.querySelector("#glassdoorList");
+  const status = document.querySelector("#glassdoorStatus");
+  const heading = document.querySelector("#glassdoorHeading");
+  const archBtn = document.querySelector("#archiveGlassdoorBtn");
+  const appBtn = document.querySelector("#appliedGlassdoorBtn");
+  if (!list) return;
+  list.innerHTML = "";
+
+  if (archBtn) {
+    archBtn.textContent = glassdoorView === "archive"
+      ? `Back to fresh (${glassdoorCurrent.length})`
+      : `Archive (${glassdoorArchive.length})`;
+    archBtn.setAttribute("aria-pressed", glassdoorView === "archive" ? "true" : "false");
+  }
+  if (appBtn) {
+    appBtn.textContent = glassdoorView === "applied"
+      ? `Back to fresh (${glassdoorCurrent.length})`
+      : `Applied (${glassdoorApplied.length})`;
+    appBtn.setAttribute("aria-pressed", glassdoorView === "applied" ? "true" : "false");
+  }
+  if (heading) {
+    heading.textContent =
+      glassdoorView === "archive" ? "Glassdoor Archive · previously surfaced roles"
+      : glassdoorView === "applied" ? "Glassdoor Applied · roles marked as applied"
+      : "Fresh Glassdoor roles from the latest sweep";
+  }
+
+  const source =
+    glassdoorView === "archive" ? glassdoorArchive
+    : glassdoorView === "applied" ? glassdoorApplied
+    : glassdoorCurrent;
+
+  if (!source.length) {
+    if (!glassdoorMeta.loaded) {
+      status.textContent = "Glassdoor watcher store not reachable yet.";
+    } else if (glassdoorView === "archive") {
+      status.textContent = "Archive is empty — older Glassdoor sweeps will collect here.";
+    } else if (glassdoorView === "applied") {
+      status.textContent = "No Glassdoor roles marked as applied yet. Click Applied on a card after you apply.";
+    } else {
+      status.textContent = "No fresh Glassdoor matches yet. JSearch returns fewer Glassdoor-indexed roles than Indeed — try again after the next sweep (8 AM / 1 PM / 6 PM ET).";
+    }
+    return;
+  }
+
+  const filtered = glassdoorFilter(source);
+  const swept = glassdoorMeta.lastSweep ? ` · last sweep ${timeAgo(glassdoorMeta.lastSweep)}` : "";
+  const label =
+    glassdoorView === "archive" ? "archived role"
+    : glassdoorView === "applied" ? "applied role"
+    : "fresh match";
+  status.textContent = `Showing ${filtered.length} of ${source.length} ${label}${source.length === 1 ? "" : "s"}${swept}.`;
+  filtered.forEach((m) => list.appendChild(glassdoorCard(m)));
+}
+
+function renderGlassdoor(data) {
+  glassdoorCurrent = (data && data.current) || [];
+  glassdoorArchive = (data && data.archive) || [];
+  glassdoorApplied = (data && data.applied) || [];
+  glassdoorMeta = { loaded: !!data, lastSweep: data && data.lastSweep };
+  glassdoorView = "fresh";
+  paintGlassdoor();
+}
+
+async function loadGlassdoor(force) {
+  if (glassdoorLoaded && !force) return;
+  const status = document.querySelector("#glassdoorStatus");
+  if (status) status.textContent = "Loading latest Glassdoor matches…";
+  const token = syncToken();
+  for (const endpoint of GLASSDOOR_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, { headers: { "x-jobpulse-pass": token } });
+      if (!res.ok) continue;
+      const { data } = await res.json();
+      glassdoorLoaded = true;
+      renderGlassdoor(data);
+      return;
+    } catch (_) { /* try next endpoint */ }
+  }
+  renderGlassdoor(null);
+}
+
+async function glassdoorMarkApplied(match, apply) {
+  const action = apply ? "markApplied" : "unmarkApplied";
+  const key = ["company", "role", "location"]
+    .map((k) => String((match && match[k]) || "").trim().toLowerCase())
+    .join("|");
+
+  if (apply) {
+    const existing =
+      glassdoorCurrent.find((m) => sameKey(m, key)) ||
+      glassdoorArchive.find((m) => sameKey(m, key)) ||
+      match;
+    const stamped = { ...existing, appliedAt: new Date().toISOString() };
+    glassdoorCurrent = glassdoorCurrent.filter((m) => !sameKey(m, key));
+    glassdoorArchive = glassdoorArchive.filter((m) => !sameKey(m, key));
+    glassdoorApplied = [stamped, ...glassdoorApplied.filter((m) => !sameKey(m, key))];
+  } else {
+    const found = glassdoorApplied.find((m) => sameKey(m, key));
+    glassdoorApplied = glassdoorApplied.filter((m) => !sameKey(m, key));
+    if (found) {
+      const { appliedAt, ...rest } = found;
+      glassdoorArchive = [rest, ...glassdoorArchive.filter((m) => !sameKey(m, key))];
+    }
+  }
+  paintGlassdoor();
+
+  const token = syncToken();
+  const payload = JSON.stringify({
+    action,
+    match: { company: match.company, role: match.role, location: match.location },
+  });
+  for (const endpoint of GLASSDOOR_ENDPOINTS) {
+    try {
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-jobpulse-pass": token },
+        body: payload,
+      });
+      if (res.ok) return;
+    } catch (_) { /* try next */ }
+  }
+  loadGlassdoor(true);
+}
+
+// Lazy-load the Glassdoor feed on first nav click — mirrors the Watcher pattern.
+elements.navItems.forEach((item) => {
+  if (item.dataset.view === "glassdoor") {
+    item.addEventListener("click", () => { if (!glassdoorLoaded) loadGlassdoor(); });
+  }
+});
+
+const refreshGlassdoorBtn = document.querySelector("#refreshGlassdoorBtn");
+if (refreshGlassdoorBtn) refreshGlassdoorBtn.addEventListener("click", () => loadGlassdoor(true));
+
+const archiveGlassdoorBtn = document.querySelector("#archiveGlassdoorBtn");
+if (archiveGlassdoorBtn) {
+  archiveGlassdoorBtn.addEventListener("click", () => {
+    glassdoorView = glassdoorView === "archive" ? "fresh" : "archive";
+    paintGlassdoor();
+  });
+}
+
+const appliedGlassdoorBtn = document.querySelector("#appliedGlassdoorBtn");
+if (appliedGlassdoorBtn) {
+  appliedGlassdoorBtn.addEventListener("click", () => {
+    glassdoorView = glassdoorView === "applied" ? "fresh" : "applied";
+    paintGlassdoor();
+  });
+}
+
+["input", "change"].forEach((eventName) => {
+  ["#glassdoorSearch", "#glassdoorRole", "#glassdoorMode"].forEach((sel) => {
+    const field = document.querySelector(sel);
+    if (field) field.addEventListener(eventName, paintGlassdoor);
+  });
+});
