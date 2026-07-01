@@ -48,3 +48,14 @@ jobs:
           echo "LinkedIn HTTP $response"
           cat /tmp/body-li.txt
           test "$response" = "200"
+
+      - name: Hit /api/cron-glassdoor (Glassdoor via JSearch)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          response=$(curl -sS -o /tmp/body-gd.txt -w "%{http_code}" \
+            -X POST "https://job-pulse-plum.vercel.app/api/cron-glassdoor" \
+            -H "x-cron-secret: $CRON_SECRET")
+          echo "Glassdoor HTTP $response"
+          cat /tmp/body-gd.txt
+          test "$response" = "200"
