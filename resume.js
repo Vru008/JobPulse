@@ -273,6 +273,12 @@
           "Your Gemini free-tier quota for today is used up. It resets around midnight US-Pacific. You can still copy/paste an answer manually until then.",
           "score-low"
         );
+      } else if (/504|timed out|timeout|FUNCTION_INVOCATION_TIMEOUT/i.test(detail)) {
+        setStatus(
+          "Timed out",
+          "The AI took too long this time (Gemini was slow). Just click Generate again — it usually works on the second try.",
+          "score-low"
+        );
       } else if (/404|not.?found/i.test(detail)) {
         setStatus(
           "Endpoint missing",
