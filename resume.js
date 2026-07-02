@@ -220,7 +220,7 @@
     const company = $("rCompany").value.trim();
     const jobDesc = $("rJobDesc").value.trim();
 
-    if (!resume) return setStatus("Need résumé", "Upload or paste your current résumé first.", "score-low");
+    // Résumé upload is optional — the canonical profile is the source of truth.
     if (!company) return setStatus("Need company", "Enter the company name.", "score-low");
     if (!jobDesc) return setStatus("Need job", "Paste the job description so it can be tailored.", "score-low");
 
@@ -239,6 +239,7 @@
         gradDate: profile.gradDate || "",
         linkedin: profile.linkedin || "",
         github: profile.github || "",
+        confirmedSkills: profile.confirmedSkills || "",
       });
       let res = null;
       let lastDetail = "";
