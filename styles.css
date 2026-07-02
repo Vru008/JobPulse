@@ -1049,3 +1049,29 @@ textarea {
   font-size: 1.0rem;
   line-height: 1.55;
 }
+
+/* ============ ATS match report (Résumé tab) ============ */
+.match-report { margin-top: 14px; display: grid; gap: 14px; }
+.match-report:empty { display: none; }
+.mr-group h4 {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+}
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.chip-ok { background: #e7f5ed; color: #15803d; border-color: rgba(21,128,61,0.25); }
+.chip-miss { background: #fdecea; color: #b91c1c; border-color: rgba(185,28,28,0.25); }
+.mr-notes { margin: 0; padding-left: 18px; }
+.mr-notes li { line-height: 1.5; font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+#atsScoreValue.score-good { color: #15803d; }
+#atsScoreValue.score-mid { color: #a15c16; }
+#atsScoreValue.score-low { color: #b91c1c; }

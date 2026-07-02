@@ -174,6 +174,45 @@
     $("atsScoreHint").textContent = hint;
   }
 
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Render the ATS score + covered/missing keyword report from the tailor engine.
+  function renderMatchReport(data, company) {
+    const score = Number.isFinite(data.atsScore) ? data.atsScore : null;
+    const covered = Array.isArray(data.covered) ? data.covered : [];
+    const missing = Array.isArray(data.missing) ? data.missing : [];
+    const notes = Array.isArray(data.notes) ? data.notes : [];
+
+    if (score != null) {
+      const cls = score >= 92 ? "score-good" : score >= 80 ? "score-mid" : "score-low";
+      const verdict = score >= 92
+        ? `Strong match for ${company} — ready to send.`
+        : `Below 92 for ${company}. Close the gaps below (never fabricate to fill them).`;
+      setStatus(`${score}/100`, verdict, cls);
+    } else {
+      setStatus("Done", `Tailored for ${company}. Edit if needed, then download PDF.`, "score-mid");
+    }
+
+    const el = $("matchReport");
+    if (!el) return;
+    const chips = (arr, kind) =>
+      arr.map((k) => `<span class="chip chip-${kind}">${esc(k)}</span>`).join("");
+    let html = "";
+    if (covered.length) {
+      html += `<div class="mr-group"><h4>✓ Covered (${covered.length})</h4><div class="chip-row">${chips(covered, "ok")}</div></div>`;
+    }
+    if (missing.length) {
+      html += `<div class="mr-group"><h4>✗ Missing / gaps (${missing.length})</h4><div class="chip-row">${chips(missing, "miss")}</div></div>`;
+    }
+    if (notes.length) {
+      html += `<div class="mr-group"><h4>Notes</h4><ul class="mr-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul></div>`;
+    }
+    el.innerHTML = html;
+  }
+
   /* ---------- AI generation ---------- */
 
   async function generate() {
@@ -197,8 +236,9 @@
         company,
         jobDescription: jobDesc,
         portfolio: profile.portfolio || "",
-        currentlyLearning: profile.learning || "",
         gradDate: profile.gradDate || "",
+        linkedin: profile.linkedin || "",
+        github: profile.github || "",
       });
       let res = null;
       let lastDetail = "";
@@ -220,11 +260,7 @@
       const data = await res.json();
       $("resumeTextOut").value = (data.resume || "").trim();
       $("coverTextOut").value = (data.coverLetter || "").trim();
-      const notes = Array.isArray(data.notes) ? data.notes : [];
-      const hint = notes.length
-        ? `Tailored for ${company}. ⚠ Fix before sending: ${notes.join(" • ")}`
-        : `Tailored for ${company}. Edit if needed, then download PDF.`;
-      setStatus("Done", hint, notes.length ? "score-mid" : "score-good");
+      renderMatchReport(data, company);
     } catch (err) {
       console.error("AI generation failed:", err);
       const detail = String(err && err.message ? err.message : err);

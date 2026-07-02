@@ -257,6 +257,14 @@
               <input id="portfolio" value="https://job-mate-nu.vercel.app" />
             </label>
             <label>
+              LinkedIn URL (mandatory — missing it costs ~5 ATS points)
+              <input id="linkedin" placeholder="linkedin.com/in/your-handle" />
+            </label>
+            <label>
+              GitHub URL (mandatory — missing it costs ~5 ATS points)
+              <input id="github" placeholder="github.com/your-handle" />
+            </label>
+            <label>
               Currently learning (honest — unlocks more roles)
               <input id="learning" value="TypeScript, Next.js" />
             </label>
@@ -513,10 +521,11 @@
 
             <div class="resume-output">
               <div class="ats-score" id="atsStatus">
-                <span>Status</span>
+                <span>ATS score</span>
                 <strong id="atsScoreValue">Ready</strong>
                 <p id="atsScoreHint">Add your résumé, a company, and the job description, then Generate.</p>
               </div>
+              <div id="matchReport" class="match-report" aria-live="polite"></div>
 
               <div class="doc-card">
                 <header>
