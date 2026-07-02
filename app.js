@@ -79,6 +79,7 @@ const state = {
       gradDate: "Sept 2026",
       linkedin: "",
       github: "",
+      confirmedSkills: "",
     };
     const saved = JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {};
     return { ...DEFAULTS, ...saved };
@@ -624,7 +625,7 @@ initialiseViewFromHash();
 
 document.querySelector("#saveProfile").addEventListener("click", (event) => {
   event.preventDefault();
-  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship", "portfolio", "learning", "gradDate", "linkedin", "github"].forEach((key) => {
+  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship", "portfolio", "learning", "gradDate", "linkedin", "github", "confirmedSkills"].forEach((key) => {
     const field = document.querySelector(`#${key}`);
     if (field) state.profile[key] = field.value;
   });
