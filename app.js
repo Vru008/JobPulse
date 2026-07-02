@@ -77,6 +77,8 @@ const state = {
       portfolio: "https://job-mate-nu.vercel.app",
       learning: "TypeScript, Next.js",
       gradDate: "Sept 2026",
+      linkedin: "",
+      github: "",
     };
     const saved = JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {};
     return { ...DEFAULTS, ...saved };
@@ -622,7 +624,7 @@ initialiseViewFromHash();
 
 document.querySelector("#saveProfile").addEventListener("click", (event) => {
   event.preventDefault();
-  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship", "portfolio", "learning", "gradDate"].forEach((key) => {
+  ["targetTitles", "skills", "location", "experience", "salary", "sponsorship", "portfolio", "learning", "gradDate", "linkedin", "github"].forEach((key) => {
     const field = document.querySelector(`#${key}`);
     if (field) state.profile[key] = field.value;
   });
