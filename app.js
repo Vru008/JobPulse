@@ -77,12 +77,20 @@ const state = {
       portfolio: "https://job-mate-nu.vercel.app",
       learning: "TypeScript, Next.js",
       gradDate: "Sept 2026",
-      linkedin: "",
-      github: "",
+      linkedin: "linkedin.com/in/vruttant-patoliya",
+      github: "github.com/Vru008",
       confirmedSkills: "",
     };
+    // Merge saved over defaults, but an EMPTY/blank saved value must NOT clobber
+    // a non-empty default (otherwise an old profile with linkedin:"" wipes the
+    // real link). Only real saved values win.
     const saved = JSON.parse(localStorage.getItem("jobpulse-profile") || "null") || {};
-    return { ...DEFAULTS, ...saved };
+    const merged = { ...DEFAULTS };
+    for (const k of Object.keys(saved)) {
+      const v = saved[k];
+      if (v != null && String(v).trim() !== "") merged[k] = v;
+    }
+    return merged;
   })(),
   enabledSources: JSON.parse(localStorage.getItem("jobpulse-sources") || "null") || sources.reduce((acc, source) => {
     acc[source.id] = source.enabled;
